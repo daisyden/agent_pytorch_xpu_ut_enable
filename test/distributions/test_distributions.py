@@ -2012,10 +2012,7 @@ class TestDistributionsDevice(DistributionsTestCase):
         self.assertLess(dups_mult, 10)
 
     @skipMPS  # MPS limits sampling with replacement to 2^24 categories
-    @skipXPUIf(
-        True,
-        "https://github.com/intel/torch-xpu-ops/issues/XXXX_MULTINOMIAL_2P24_CATEGORIES",
-    )
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_MULTINOMIAL_2P24_CATEGORIES")  # fmt: skip
     @largeTensorTest("2GB")
     @dtypes(torch.float, torch.double)
     def test_multinomial_many_categories(self, device, dtype):
@@ -2045,10 +2042,7 @@ class TestDistributionsDevice(DistributionsTestCase):
         low_fraction = (samples < n // 10).float().mean().item()
         self.assertEqual(low_fraction, 0.1, atol=0.08, rtol=0)
 
-    @skipXPUIf(
-        True,
-        "https://github.com/intel/torch-xpu-ops/issues/XXXX_MULTINOMIAL_REDUCED_PRECISION",
-    )
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_MULTINOMIAL_REDUCED_PRECISION")  # fmt: skip
     @dtypes(torch.half, torch.bfloat16)
     def test_multinomial_reduced_precision_with_replacement(self, device, dtype):
         # Half row sums overflow past 65504, and a bfloat16 CDF is too coarse: the old
