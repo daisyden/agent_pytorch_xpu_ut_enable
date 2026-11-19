@@ -35,7 +35,10 @@ from torch.testing._internal.common_utils import (
     skipIfNoCuteDSL,
     TEST_CUTEDSL,
 )
-from torch.testing._internal.inductor_utils import HAS_CUDA_AND_TRITON
+from torch.testing._internal.inductor_utils import (
+    HAS_CUDA_AND_TRITON,
+    HAS_XPU_AND_TRITON,
+)
 from torch.testing._internal.opinfo.core import (
     BinaryUfuncInfo,
     generate_elementwise_binary_with_scalar_samples,
@@ -196,8 +199,8 @@ class StrictNumericsConfigTest(TestCase):
 
 
 @unittest.skipUnless(
-    HAS_CUDA_AND_TRITON and torch.version.hip is None,
-    "requires NVIDIA CUDA and Triton",
+    (HAS_CUDA_AND_TRITON or HAS_XPU_AND_TRITON) and torch.version.hip is None,
+    "requires NVIDIA CUDA or XPU and Triton",
 )
 class StrictNumericsCompileTest(TestCase):
     @ops(
@@ -693,7 +696,9 @@ class StrictNumericsTest(TestCase):
         self.assertIn("tensor_descriptor" if kind == "split" else "tl.store", code)
 
 
-instantiate_device_type_tests(StrictNumericsCompileTest, globals(), only_for="cuda")
+instantiate_device_type_tests(
+    StrictNumericsCompileTest, globals(), only_for=("cuda", "xpu"), allow_xpu=True
+)
 instantiate_device_type_tests(StrictNumericsTest, globals(), only_for="cuda")
 
 
