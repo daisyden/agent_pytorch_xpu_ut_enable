@@ -1291,6 +1291,10 @@ class TestZeroRedundancyOptimizerDistributedFreshPG(DistributedTestBase):
 
     @requires_accelerator_dist_backend()
     @skip_if_no_gpu
+    # NOTE: flaky on XPU -- the ZeRO join path intermittently produces different
+    # parameters from the reference local optimizer ("Parameters differ between
+    # using ZeRO and local optimizer"), roughly 1 run in 10. Tracked by
+    # https://github.com/intel/torch-xpu-ops/issues/5741
     def test_zero_join_gpu(self):
         """Check that the ZeRO join hook allows training with uneven inputs
         on GPU."""
