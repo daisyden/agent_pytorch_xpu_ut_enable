@@ -16,6 +16,7 @@ from torch.testing._internal.common_utils import (
     requires_cuda_python_bindings,
     run_tests,
     skipIfRocm,
+    subtest,
     TEST_CUDA,
     TEST_CUDA_GRAPH,
     TEST_XPU,
@@ -296,12 +297,10 @@ class TestCOW(TestCase):
             self.assertEqual(replacement, torch.full_like(replacement, 99))
             self.assertEqual(x, torch.ones_like(x))
 
-    @parametrize("complete", [False, True])
+    # fmt: off
+    @parametrize("complete", [subtest(False, decorators=[skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_COW_GRAPH_SEMANTICS")]), True])
+    # fmt: on
     def test_retired_allocation_is_bounded_and_released(self, device, complete):
-        if device.startswith("xpu") and not complete:
-            self.skipTest(
-                "https://github.com/intel/torch-xpu-ops/issues/XXXX_COW_GRAPH_SEMANTICS"
-            )
         initial = torch.get_device_module(device).memory_allocated(device)
         x = torch.ones(16 * 1024, device=device)
         nbytes = x.nbytes
