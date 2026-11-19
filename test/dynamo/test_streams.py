@@ -3642,21 +3642,18 @@ class <lambda>(torch.nn.Module):
 
         graph.lint()
 
-
-instantiate_device_type_tests(
-    TestStreams, globals(), allow_xpu=True, except_for=("cpu",)
-)
-
-
-@requires_cuda
-class TestStreamsCUDASpecific(torch._dynamo.test_case.TestCase):
-    def test_synchronize_indexless_device_resolves_current_device(self) -> None:
+    def test_synchronize_indexless_device_resolves_current_device(self, device) -> None:
         # Single-GPU counterpart to the 2-GPU test in test_compile_on_one_rank.py,
         # since the dynamo shards are single-GPU. Patching current_device_index
         # drives both the trace-time resolution and the guard that checks it, so a
         # second current device must produce a second graph carrying the new index.
+        # The device the harness hands us carries an index ("xpu:0"); the whole
+        # point here is an *indexless* device, so trace the device type alone.
+        device_type = torch.device(device).type
+        device_module = torch.get_device_module(device_type)
+
         def f():
-            torch.cuda.synchronize(torch.device("cuda"))
+            device_module.synchronize(torch.device(device_type))
             return 1
 
         def emitted():
@@ -3686,9 +3683,19 @@ class TestStreamsCUDASpecific(torch._dynamo.test_case.TestCase):
             ):
                 compiled()
 
-        self.assertEqual(emitted(), [("cuda", 3), ("cuda", 5)])
-        self.assertEqual(synced, [torch.device("cuda", 3), torch.device("cuda", 5)])
+        self.assertEqual(emitted(), [(device_type, 3), (device_type, 5)])
+        self.assertEqual(
+            synced, [torch.device(device_type, 3), torch.device(device_type, 5)]
+        )
 
+
+instantiate_device_type_tests(
+    TestStreams, globals(), allow_xpu=True, except_for=("cpu",)
+)
+
+
+@requires_cuda
+class TestStreamsCUDASpecific(torch._dynamo.test_case.TestCase):
     @torch.compiler.config.patch(compile_on_one_rank=True)
     def test_synchronize_preserves_indexless_device_under_coor(self) -> None:
         def f(x):
