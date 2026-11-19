@@ -12,6 +12,7 @@ from torch.testing._internal.common_device_type import (
     expectedFailureXLA,
     instantiate_device_type_tests,
     onlyAccelerator,
+    onlyCUDA,
 )
 from torch.testing._internal.common_nn import freeze_rng_state, NNTestCase
 from torch.testing._internal.common_utils import (
@@ -335,6 +336,7 @@ class TestDropoutNNCUDA(NNTestCase):
         overlap = m1.view(-1, 8)[:, 4:] == m2.view(-1, 8)[:, :4]
         self.assertLess(overlap.float().mean().item(), 0.6)
 
+    @onlyCUDA
     def test_native_dropout_vec2_consecutive_calls_independent(self, device):
         # With 8-byte-aligned fp32 (VEC=2) each thread consumed 4 philox values per
         # iteration instead of sharing them across two, overrunning the reservation
@@ -353,7 +355,9 @@ class TestDropoutNNCUDA(NNTestCase):
 instantiate_device_type_tests(
     TestDropoutNNDeviceType, globals(), allow_mps=True, allow_xpu=True
 )
-instantiate_device_type_tests(TestDropoutNNCUDA, globals(), only_for="cuda")
+instantiate_device_type_tests(
+    TestDropoutNNCUDA, globals(), only_for=("cuda", "xpu"), allow_xpu=True
+)
 instantiate_parametrized_tests(TestDropoutNN)
 
 if __name__ == "__main__":
