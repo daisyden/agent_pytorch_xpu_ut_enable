@@ -16,6 +16,7 @@ from torch.testing._internal.common_device_type import (
     dtypes,
     instantiate_device_type_tests,
     onlyCPU,
+    onlyAccelerator,
     onlyCUDA,
 )
 from torch.testing._internal.common_dtype import all_types_and
@@ -404,9 +405,9 @@ class TestLibtorchAgnostic(TestCase):
         t = torch.randn(2, 3, device=device)
         self.assertFalse(libtorch_agnostic.ops.my_is_pinned(t))
 
-    @onlyCUDA
+    @onlyAccelerator
     @skipIfTorchVersionLessThan(2, 10)
-    def test_my_is_pinned_cuda_true(self, device):
+    def test_my_is_pinned_true(self, device):
         import libtorch_agn_2_10 as libtorch_agnostic
 
         pinned = torch.randn(2, 3, device="cpu", pin_memory=True)
@@ -1176,22 +1177,20 @@ class TestLibtorchAgnostic(TestCase):
             libtorch_agnostic.ops.test_device_set_index(cuda_device, 129)
 
     @skipIfTorchVersionLessThan(2, 10)
-    @onlyCUDA
+    @onlyAccelerator
     @deviceCountAtLeast(2)
-    def test_tensor_device(self, device):
+    def test_tensor_device(self, devices):
         import libtorch_agn_2_10 as libtorch_agnostic
 
         t = torch.randn(2, 3)
         self.assertEqual(libtorch_agnostic.ops.test_tensor_device(t), t.device)
 
-        t_cuda = torch.randn(2, 3, device="cuda")
-        self.assertEqual(
-            libtorch_agnostic.ops.test_tensor_device(t_cuda), t_cuda.device
-        )
+        t_acc = torch.randn(2, 3, device=devices[0])
+        self.assertEqual(libtorch_agnostic.ops.test_tensor_device(t_acc), t_acc.device)
 
-        t_cuda_1 = torch.randn(2, 3, device="cuda:1")
+        t_acc_1 = torch.randn(2, 3, device=devices[1])
         self.assertEqual(
-            libtorch_agnostic.ops.test_tensor_device(t_cuda_1), t_cuda_1.device
+            libtorch_agnostic.ops.test_tensor_device(t_acc_1), t_acc_1.device
         )
 
     @skipIfTorchVersionLessThan(2, 10)
@@ -2822,7 +2821,9 @@ instantiate_device_type_tests(
     TestLibtorchAgnosticMetal, globals(), allow_mps=True, only_for="mps"
 )
 
-instantiate_device_type_tests(TestLibtorchAgnostic, globals(), except_for=None)
+instantiate_device_type_tests(
+    TestLibtorchAgnostic, globals(), except_for=None, allow_xpu=True
+)
 
 if __name__ == "__main__":
     run_tests()
