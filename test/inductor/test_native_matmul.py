@@ -21,6 +21,7 @@ from torch.testing._internal.common_device_type import (
 from torch.testing._internal.common_utils import (
     instantiate_parametrized_tests,
     parametrize,
+    skipIfXpu,
     TEST_WITH_ROCM,
 )
 from torch.testing._internal.inductor_utils import GPU_TYPE, HAS_GPU
@@ -327,6 +328,7 @@ class TestNativeMatmulRowReduction(TestCase):
             "local_xindex_mask)"
         ).run(code)
 
+    @skipIfXpu(msg="https://github.com/intel/torch-xpu-ops/issues/6234")  # fmt: skip
     def test_matmul_output_precision(self):
         def f(x, weight):
             return (x @ weight).sum(-1)
@@ -340,6 +342,7 @@ class TestNativeMatmulRowReduction(TestCase):
             ".to(tl.float16)"
         ).check("tl.sum").run(code)
 
+    @skipIfXpu(msg="https://github.com/intel/torch-xpu-ops/issues/XXXX_NATIVE_MATMUL_ROW_REDUCTION_PRECISION")  # fmt: skip
     def test_row_reduction_output_precision(self):
         def f(x, weight):
             reduced = (x @ weight).sum(-1)
@@ -610,7 +613,10 @@ class TestNativeMatmulRowReductionScheduling(TestCase):
 
 
 instantiate_device_type_tests(
-    TestNativeMatmulRowReductionScheduling, globals(), only_for=GPU_TYPE
+    TestNativeMatmulRowReductionScheduling,
+    globals(),
+    only_for=GPU_TYPE,
+    allow_xpu=True,
 )
 
 
@@ -633,7 +639,10 @@ class TestNativeMatmulRowReductionHeuristic(TestCase):
 
 
 instantiate_device_type_tests(
-    TestNativeMatmulRowReductionHeuristic, globals(), only_for=GPU_TYPE
+    TestNativeMatmulRowReductionHeuristic,
+    globals(),
+    only_for=GPU_TYPE,
+    allow_xpu=True,
 )
 
 
