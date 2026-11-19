@@ -2450,6 +2450,7 @@ class TestCompileOnOneRankDeviceAsParameter(TestCase):
 
     @requires_multigpu
     @compiler_config.patch(compile_on_one_rank=True)
+    @skipIfXpu(msg="https://github.com/intel/torch-xpu-ops/issues/5338")
     @parametrize("graph_partition", (False, True))
     def test_cudagraphs_reuses_artifact_across_devices(self, graph_partition):
         # cudagraphify takes its device from the loaded artifact, so an artifact that
@@ -2457,19 +2458,19 @@ class TestCompileOnOneRankDeviceAsParameter(TestCase):
         from torch._dynamo.utils import counters
         from torch._inductor.utils import clear_caches, fresh_cache
 
-        inp1 = torch.randn(2, 8, device="cuda:1")
+        inp1 = torch.randn(2, 8, device=f"{device_type}:1")
         ref = self._coor_inductor_fn(inp1)
         cfg = {"triton.cudagraphs": True, "graph_partition": graph_partition}
         with fresh_cache(), torch._inductor.config.patch(cfg):
-            with torch.cuda.device(0):
+            with device_module.device(0):
                 compiled = torch.compile(
                     self._coor_inductor_fn, backend="inductor", fullgraph=True
                 )
-                compiled(torch.randn(2, 8, device="cuda:0"))
+                compiled(torch.randn(2, 8, device=f"{device_type}:0"))
             torch._dynamo.reset()
             clear_caches()
             counters.clear()
-            with torch.cuda.device(1):
+            with device_module.device(1):
                 compiled = torch.compile(
                     self._coor_inductor_fn, backend="inductor", fullgraph=True
                 )
@@ -2477,7 +2478,7 @@ class TestCompileOnOneRankDeviceAsParameter(TestCase):
                     out = compiled(inp1)
         self.assertEqual(counters["inductor"]["fxgraph_cache_hit"], 1)
         self.assertEqual(counters["inductor"]["cudagraph_skips"], 0)
-        self.assertEqual(out.device, torch.device("cuda:1"))
+        self.assertEqual(out.device, torch.device(f"{device_type}:1"))
         self.assertEqual(out, ref)
 
     @requires_multigpu
