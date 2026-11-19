@@ -2805,7 +2805,7 @@ cos: aten.cos.default -> PREFER_RECOMPUTE""",
 instantiate_parametrized_tests(ActivationCheckpointingViaTagsGenericTests)
 
 
-@unittest.skipIf(not TEST_CUDA, "requires CUDA")
+@unittest.skipIf(not torch.accelerator.is_available(), "requires an accelerator")
 class ActivationCheckpointingViaTagsCUDAOnlyTests(
     ActivationCheckpointingViaTagsTestBase
 ):
@@ -2838,22 +2838,23 @@ class ActivationCheckpointingViaTagsCUDAOnlyTests(
         def get_act_mem(f):
             out = f()
             out.backward()
-            start_mem = torch.cuda.memory_stats()["requested_bytes.all.current"]
+            start_mem = torch.accelerator.memory_stats()["requested_bytes.all.current"]
             out = f()
             act_mem = (
-                torch.cuda.memory_stats()["requested_bytes.all.current"] - start_mem
+                torch.accelerator.memory_stats()["requested_bytes.all.current"]
+                - start_mem
             )
             out.backward()
             return act_mem
 
-        x = torch.randn(N, N, device="cuda")
+        x = torch.randn(N, N, device=device_type)
 
         torch._dynamo.reset()
-        compiled = torch.compile(Model().cuda(), backend="aot_eager")
+        compiled = torch.compile(Model().to(device_type), backend="aot_eager")
         self.assertGreater(get_act_mem(lambda: compiled(x)), 0)
 
         torch._dynamo.reset()
-        compiled = torch.compile(Model(budget=0.0).cuda(), backend="aot_eager")
+        compiled = torch.compile(Model(budget=0.0).to(device_type), backend="aot_eager")
         self.assertEqual(get_act_mem(lambda: compiled(x)), 0)
 
     def test_region_activation_memory_budget_per_region(self):
@@ -2890,30 +2891,33 @@ class ActivationCheckpointingViaTagsCUDAOnlyTests(
         def get_act_mem(f):
             out = f()
             out.backward()
-            start_mem = torch.cuda.memory_stats()["requested_bytes.all.current"]
+            start_mem = torch.accelerator.memory_stats()["requested_bytes.all.current"]
             out = f()
             act_mem = (
-                torch.cuda.memory_stats()["requested_bytes.all.current"] - start_mem
+                torch.accelerator.memory_stats()["requested_bytes.all.current"]
+                - start_mem
             )
             out.backward()
             return act_mem
 
-        x = torch.randn(N, N, device="cuda")
+        x = torch.randn(N, N, device=device_type)
 
         torch._dynamo.reset()
-        both_save = torch.compile(Model(1.0, 1.0).cuda(), backend="aot_eager")
+        both_save = torch.compile(Model(1.0, 1.0).to(device_type), backend="aot_eager")
         mem_both_save = get_act_mem(lambda: both_save(x))
 
         torch._dynamo.reset()
-        a_recomp = torch.compile(Model(0.0, 1.0).cuda(), backend="aot_eager")
+        a_recomp = torch.compile(Model(0.0, 1.0).to(device_type), backend="aot_eager")
         mem_a_recomp = get_act_mem(lambda: a_recomp(x))
 
         torch._dynamo.reset()
-        b_recomp = torch.compile(Model(1.0, 0.0).cuda(), backend="aot_eager")
+        b_recomp = torch.compile(Model(1.0, 0.0).to(device_type), backend="aot_eager")
         mem_b_recomp = get_act_mem(lambda: b_recomp(x))
 
         torch._dynamo.reset()
-        both_recomp = torch.compile(Model(0.0, 0.0).cuda(), backend="aot_eager")
+        both_recomp = torch.compile(
+            Model(0.0, 0.0).to(device_type), backend="aot_eager"
+        )
         mem_both_recomp = get_act_mem(lambda: both_recomp(x))
 
         # Both save > either one recomputing > both recomputing
@@ -2934,7 +2938,7 @@ class ActivationCheckpointingViaTagsCUDAOnlyTests(
         def build(budget):
             linears = torch.nn.ModuleList(
                 [torch.nn.Linear(N, N) for _ in range(NUM_LAYERS)]
-            ).cuda()
+            ).to(device_type)
 
             @nested_compile_region
             def region(x):
@@ -2955,15 +2959,16 @@ class ActivationCheckpointingViaTagsCUDAOnlyTests(
         def get_act_mem(f):
             out = f()
             out.backward()
-            start_mem = torch.cuda.memory_stats()["requested_bytes.all.current"]
+            start_mem = torch.accelerator.memory_stats()["requested_bytes.all.current"]
             out = f()
             act_mem = (
-                torch.cuda.memory_stats()["requested_bytes.all.current"] - start_mem
+                torch.accelerator.memory_stats()["requested_bytes.all.current"]
+                - start_mem
             )
             out.backward()
             return act_mem
 
-        x = torch.randn(N, N, device="cuda")
+        x = torch.randn(N, N, device=device_type)
 
         torch._dynamo.reset()
         baseline = torch.compile(build(None), backend="aot_eager", fullgraph=True)
@@ -3740,7 +3745,7 @@ def forward(self, arg0_1, arg1_1, arg2_1):
             self._compile_and_capture(TwoBackwards(), True, (x,))
 
 
-@unittest.skipIf(not TEST_CUDA, "CUDA not available")
+@unittest.skipIf(not torch.accelerator.is_available(), "accelerator not available")
 class RematerializeACNodesPassCUDAOnlyTests(RematerializeACNodesPassTestBase):
     hw_classification = HardwareClassification.CUDA
 
@@ -3748,12 +3753,15 @@ class RematerializeACNodesPassCUDAOnlyTests(RematerializeACNodesPassTestBase):
         from torch.nn.attention import sdpa_kernel, SDPBackend
 
         cases = []
-        if PLATFORM_SUPPORTS_MEM_EFF_ATTENTION:
+        # XPU has no memory-efficient SDPA kernel (it falls back to math)
+        if PLATFORM_SUPPORTS_MEM_EFF_ATTENTION and device_type != "xpu":
             cases.append((SDPBackend.EFFICIENT_ATTENTION, torch.float32))
         if PLATFORM_SUPPORTS_FLASH_ATTENTION:
             cases.append((SDPBackend.FLASH_ATTENTION, torch.float16))
         if PLATFORM_SUPPORTS_CUDNN_ATTENTION:
             cases.append((SDPBackend.CUDNN_ATTENTION, torch.float16))
+        if device_type == "xpu":
+            cases.append((SDPBackend.FLASH_ATTENTION, torch.float16))
         if not cases:
             self.skipTest("No fused SDPA backends available")
         sdpa_ops = {
@@ -3777,13 +3785,13 @@ class RematerializeACNodesPassCUDAOnlyTests(RematerializeACNodesPassTestBase):
             with self.subTest(backend=backend, dtype=dtype):
                 torch._dynamo.reset()
                 q = torch.randn(
-                    2, 4, 128, 64, device="cuda", dtype=dtype, requires_grad=True
+                    2, 4, 128, 64, device=device_type, dtype=dtype, requires_grad=True
                 )
                 k = torch.randn(
-                    2, 4, 128, 64, device="cuda", dtype=dtype, requires_grad=True
+                    2, 4, 128, 64, device=device_type, dtype=dtype, requires_grad=True
                 )
                 v = torch.randn(
-                    2, 4, 128, 64, device="cuda", dtype=dtype, requires_grad=True
+                    2, 4, 128, 64, device=device_type, dtype=dtype, requires_grad=True
                 )
 
                 def fwd_bwd_with_sdpa(q, k, v):
