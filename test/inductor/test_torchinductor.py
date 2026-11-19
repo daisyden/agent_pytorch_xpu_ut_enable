@@ -13811,6 +13811,9 @@ def forward(self, arg0_1: "Sym(s77)", arg1_1: "Sym(s27)", arg2_1: "Sym(s53)", ar
         f"functionalization of rng ops supported only on {GPU_TYPE}",
     )
     @patch.object(torch._functorch.config, "functionalize_rng_ops", True)
+    # functionalize_rng_ops is CUDA-only: CUDARngStateHelper raises
+    # "RuntimeError: CUDA not available" on XPU.
+    # https://github.com/intel/torch-xpu-ops/issues/3549
     @expectedFailureXPU
     @skip_if_gpu_halide  # rand
     @xfail_if_mps
