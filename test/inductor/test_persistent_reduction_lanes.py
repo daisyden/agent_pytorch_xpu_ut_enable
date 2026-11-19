@@ -7,7 +7,10 @@ from torch._inductor import config, metrics
 from torch._inductor.choices import InductorChoices
 from torch._inductor.utils import run_and_get_code
 from torch._inductor.virtualized import V
-from torch.testing._internal.common_device_type import instantiate_device_type_tests
+from torch.testing._internal.common_device_type import (
+    instantiate_device_type_tests,
+    skipXPUIf,
+)
 from torch.testing._internal.common_utils import (
     HardwareClassification,
     parametrize,
