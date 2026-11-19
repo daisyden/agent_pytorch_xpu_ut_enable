@@ -4229,7 +4229,7 @@ class TestTestParametrizationDeviceType(TestCase):
 
 
 instantiate_parametrized_tests(TestTestParametrization)
-instantiate_device_type_tests(TestTestParametrizationDeviceType, globals())
+instantiate_device_type_tests(TestTestParametrizationDeviceType, globals(), allow_xpu=True)
 
 
 class TestImports(TestCase):
