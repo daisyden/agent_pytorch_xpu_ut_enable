@@ -3353,6 +3353,10 @@ class TestFullyShardReduceOpWorldSize1(FSDPTestContinuous):
     def world_size(self) -> int:
         return 1
 
+    @unittest.skipIf(
+        device.type == "xpu",
+        "https://github.com/intel/torch-xpu-ops/issues/6285",
+    )
     @parametrize("divide_factor", [None, 1.0, 2.0])
     def test_singleton_reduce_reuses_input(self, divide_factor):
         ops = []
