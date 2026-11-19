@@ -908,6 +908,10 @@ class TestCollectivesMultiProc(DynamoDistributedMultiProcTestCase):
 
     @unittest.skipIf(not HAS_GPU, "Inductor+gpu needs triton and recent GPU arch")
     @skip_if_lt_x_gpu(2)
+    # NOTE: on XPU this currently passes without capturing a graph -- inductor
+    # skips cudagraphs ("no Graph Trees backend registered for the current
+    # accelerator"), so only the numerics are checked. Tracked by
+    # https://github.com/intel/torch-xpu-ops/issues/5338
     def test_allreduce_inductor_cudagraph_trees(self):
         """
         Tests whether cudagraph trees support all_reduce from nccl
