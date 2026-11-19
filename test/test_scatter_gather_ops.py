@@ -506,7 +506,7 @@ class TestScatterGatherDevice(TestCase):
         self.assertIs(result, out)
         self.assertEqual(result.cpu(), expected, atol=0, rtol=0)
 
-    @onlyCUDA
+    @onlyAccelerator
     @serialTest()
     @largeTensorTest("5GB")
     def test_scatter_copy_large_slice(self, device):
@@ -811,7 +811,7 @@ class TestScatterGatherDevice(TestCase):
                     expected_result[2] = 0
                 self.assertEqual(input, expected_result)
 
-    @onlyCUDA
+    @onlyAccelerator
     @dtypes(torch.float16, torch.bfloat16)
     @parametrize(
         "op",
