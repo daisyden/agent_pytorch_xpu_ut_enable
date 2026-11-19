@@ -66,6 +66,7 @@ class TestPersistentReductionLanes(TestCase):
             self.assertEqual(source.count("tl.load("), 2)
         return source
 
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PERSISTENT_LANES_PTX_ASM")  # fmt: skip
     @parametrize("group,all_lanes", [(8, False), (64, False), (32, True)])
     def test_internal_rounded_source(self, device, group, all_lanes):
         def fn(x, y):
@@ -96,6 +97,7 @@ class TestPersistentReductionLanes(TestCase):
         with config.patch(patches):
             self.check(fn, device)
 
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PERSISTENT_LANES_PTX_ASM")  # fmt: skip
     def test_three_output_asm_stack(self, device):
         op, suffix, reg = (
             ("v_add_f32", "", "v") if torch.version.hip else ("add.f32", ";", "f")
@@ -120,6 +122,7 @@ class TestPersistentReductionLanes(TestCase):
 
         self.check(fn, device, reference=stacked_lanes, kernels=2)
 
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PERSISTENT_LANES_PTX_ASM")  # fmt: skip
     def test_concat_destination_reader_is_separate(self, device):
         def fn(x, y):
             packed = stacked_lanes(x, y)
@@ -128,6 +131,7 @@ class TestPersistentReductionLanes(TestCase):
         self.check(fn, device, kernels=3)
         self.assertEqual(metrics.codegen_nested_reduction, 1)
 
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PERSISTENT_LANES_PTX_ASM")  # fmt: skip
     def test_concat_with_foreign_column(self, device):
         # Only one column of the stack is a lane epilogue; the other column is
         # written by an unrelated reduction.
@@ -140,6 +144,7 @@ class TestPersistentReductionLanes(TestCase):
         self.check(fn, device, extra=(z,), kernels=None)
         self.assertEqual(metrics.codegen_nested_reduction, 1)
 
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PERSISTENT_LANES_PTX_ASM")  # fmt: skip
     def test_source_mutation_preserves_versions(self, device):
         def fn(x, y):
             maximum = x.float().abs().amax(-1)
@@ -156,6 +161,7 @@ class TestPersistentReductionLanes(TestCase):
         self.assertEqual(actual, expected, atol=0, rtol=0)
         self.assertEqual(actual_x, expected_x, atol=0, rtol=0)
 
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PERSISTENT_LANES_PTX_ASM")  # fmt: skip
     @parametrize("disable_config", [False, True])
     def test_forced_looped_falls_back(self, device, disable_config):
         class LoopedChoices(InductorChoices):
@@ -193,6 +199,7 @@ class TestPersistentReductionLanes(TestCase):
         self.assertEqual(actual, expected, atol=0, rtol=0)
         self.assertEqual(metrics.generated_kernel_count, 2)
 
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PERSISTENT_LANES_PTX_ASM")  # fmt: skip
     def test_looped_consumer_keeps_persistent_lane_group(self, device):
         # Alone, out2 plans as a looped stage over x. Joining it to the
         # persistent {w, maximum, out1} group would demote out1's lane read of w.
@@ -256,6 +263,7 @@ class TestPersistentReductionLanes(TestCase):
             torch._dynamo.maybe_mark_dynamic(y, 1)
             self.assertEqual(compiled(x, y), fn(x, y), atol=0, rtol=0)
 
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PERSISTENT_LANES_PTX_ASM")  # fmt: skip
     @parametrize("group", [31, 32])
     def test_cross_row_lane_is_not_forwarded(self, device, group):
         def fn(x, y):
@@ -285,7 +293,7 @@ class TestPersistentReductionLanes(TestCase):
 
 
 instantiate_device_type_tests(
-    TestPersistentReductionLanes, globals(), only_for=("cuda",)
+    TestPersistentReductionLanes, globals(), only_for=("cuda", "xpu"), allow_xpu=True
 )
 
 if __name__ == "__main__":
