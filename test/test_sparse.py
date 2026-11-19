@@ -724,7 +724,7 @@ class TestSparse(TestSparseBase):
         sparse_matrix = sparse_matrix.coalesce()
 
     @onlyAccelerator
-    @expectedFailureXPU  # https://github.com/intel/torch-xpu-ops/issues/5669
+    @expectedFailureXPU  # https://github.com/intel/torch-xpu-ops/issues/XXXX_SPARSE_COALESCE_WIDE_DENSE_DIMS
     @dtypes(torch.float32, torch.float16, torch.bool)
     @dtypesIfMPS(torch.float32)
     def test_coalesce_wide_dense_dims(self, device, dtype):
