@@ -21,7 +21,10 @@ from torch._inductor.utils import (
     TRITON_FLOAT8_DTYPES,
 )
 from torch._inductor.virtualized import V
-from torch.testing._internal.common_device_type import instantiate_device_type_tests
+from torch.testing._internal.common_device_type import (
+    instantiate_device_type_tests,
+    skipXPUIf,
+)
 from torch.testing._internal.common_utils import (
     HardwareClassification,
     instantiate_parametrized_tests,
@@ -312,6 +315,7 @@ class TestPitchedLaneSources(TestCase):
 class TestNestedAsmLaneInputs(NestedLaneTestCase):
     hw_classification = HardwareClassification.CUDA
 
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_NESTED_LANES_PTX_ASM")  # fmt: skip
     @parametrize("dynamic_batch", [False, True])
     @config.patch({**NESTED_CONFIG, "comprehensive_padding": True})
     def test_pitched_layer_norm_lanes(self, device, dynamic_batch):
@@ -343,6 +347,7 @@ class TestNestedAsmLaneInputs(NestedLaneTestCase):
         # Three FP6 words and the scale.
         self.assertEqual(compute[0].count("tl.store("), 4)
 
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_NESTED_LANES_PTX_ASM")  # fmt: skip
     @parametrize("persistent", [False, True])
     @parametrize("width,shift_groups", [(6144, False), (1024, True)])
     def test_parent_lane_inputs(self, device, persistent, width, shift_groups):
@@ -373,6 +378,7 @@ class TestNestedAsmLaneInputs(NestedLaneTestCase):
 
         self.compare(fn, lane_input(device), persistent, loop_ordering=False)
 
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_NESTED_LANES_PTX_ASM")  # fmt: skip
     @parametrize("persistent", [False, True])
     @parametrize("quantized_output", [False, True])
     def test_parent_full_lane_source(self, device, persistent, quantized_output):
@@ -391,6 +397,7 @@ class TestNestedAsmLaneInputs(NestedLaneTestCase):
         self.assertEqual(metrics.codegen_nested_reduction, 1)
         self.assertEqual(metrics.generated_kernel_count, 1)
 
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_NESTED_LANES_PTX_ASM")  # fmt: skip
     @parametrize("rows", [128, 256])
     @config.patch(
         {
@@ -436,6 +443,7 @@ class TestNestedAsmLaneInputs(NestedLaneTestCase):
         self.assertEqual(metrics.codegen_nested_reduction, 1)
         self.assertEqual(len([k for k in kernels if "tl.load(" in k]), 1)
 
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_NESTED_LANES_PTX_ASM")  # fmt: skip
     @parametrize("rows", [128, 1024])
     @config.patch(NESTED_CONFIG)
     def test_padded_two_pass_layer_norm(self, device, rows):
@@ -633,8 +641,9 @@ class TestNestedLaneSplits(NestedLaneTestCase):
 instantiate_device_type_tests(
     TestRecursiveLaneSplit, globals(), only_for=("cuda", "xpu"), allow_xpu=True
 )
-# skipIf XPU: PTX inline asm, https://github.com/intel/torch-xpu-ops/issues/XXXX_NESTED_LANES_PTX_ASM
-instantiate_device_type_tests(TestNestedAsmLaneInputs, globals(), only_for="cuda")
+instantiate_device_type_tests(
+    TestNestedAsmLaneInputs, globals(), only_for=("cuda", "xpu"), allow_xpu=True
+)
 
 instantiate_device_type_tests(
     TestPitchedLaneSources, globals(), only_for=GPU_TYPE, allow_xpu=True
