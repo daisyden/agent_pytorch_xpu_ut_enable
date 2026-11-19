@@ -11,6 +11,7 @@ from torch.testing._internal.common_device_type import (
     instantiate_device_type_tests,
     onlyAccelerator,
     onlyCUDA,
+    skipXPUIf,
 )
 from torch.testing._internal.common_dtype import floating_types_and
 from torch.testing._internal.common_utils import (
@@ -615,6 +616,9 @@ class TestStatelessRNGDistribution(TestCase):
         self.assertTrue(result.min().item() >= 2.0)
         self.assertTrue(result.max().item() <= 5.0)
 
+    @skipXPUIf(
+        True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PHILOX_OPS_XPU"
+    )
     @parametrize("inplace", [False, True])
     @dtypes(*all_floating_dtypes)
     def test_uniform_tensor_bounds_match_scalar(self, device, dtype, inplace):
@@ -633,6 +637,9 @@ class TestStatelessRNGDistribution(TestCase):
         for low in (torch.full((8, 1), -3.0, device=device), -3.0):
             self.assertEqual(gen(low=low, high=high), expected, atol=0, rtol=0)
 
+    @skipXPUIf(
+        True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PHILOX_OPS_XPU"
+    )
     @parametrize("keys", ["single", "batched"])
     @parametrize("cols", [subtest(36, name="aligned"), subtest(37, name="unaligned")])
     @dtypes(*all_floating_dtypes)
@@ -649,6 +656,9 @@ class TestStatelessRNGDistribution(TestCase):
             expected = random.uniform(key, shape, low=lo, high=hi, dtype=dtype)
             self.assertEqual(actual[i], expected[i], atol=0, rtol=0)
 
+    @skipXPUIf(
+        True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PHILOX_OPS_XPU"
+    )
     @parametrize("keys", ["single", "batched"])
     @dtypes(*all_floating_dtypes)
     def test_uniform_tensor_bounds_cols_vary(self, device, dtype, keys):
@@ -664,6 +674,9 @@ class TestStatelessRNGDistribution(TestCase):
             expected = random.uniform(key, shape, low=lo, high=hi, dtype=dtype)
             self.assertEqual(actual[:, i], expected[:, i], atol=0, rtol=0)
 
+    @skipXPUIf(
+        True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PHILOX_OPS_XPU"
+    )
     @dtypes(*all_floating_dtypes)
     def test_uniform_tensor_bounds_noncontig(self, device, dtype):
         # Results must not depend on the memory layout of the bounds or output.
@@ -687,12 +700,18 @@ class TestStatelessRNGDistribution(TestCase):
             actual = random.uniform_(key, out, low=low, high=high)
             self.assertEqual(actual, expected, atol=0, rtol=0)
 
+    @skipXPUIf(
+        True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PHILOX_OPS_XPU"
+    )
     def test_uniform_tensor_bounds_empty(self, device):
         key = random.key(42, device=device)
         for shape in ((0, 3), (3, 0)):
             low = torch.zeros(shape, device=device)
             self.assertEqual(random.uniform(key, shape, low=low).shape, shape)
 
+    @skipXPUIf(
+        True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PHILOX_OPS_XPU"
+    )
     def test_uniform_tensor_bounds_grad(self, device):
         key = random.key(42, device=device)
         low = torch.zeros(8, 1, device=device, requires_grad=True)
@@ -711,6 +730,9 @@ class TestStatelessRNGDistribution(TestCase):
         self.assertTrue(gradcheck(f, bounds, check_forward_ad=True))
         self.assertTrue(gradgradcheck(f, bounds))
 
+    @skipXPUIf(
+        True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PHILOX_OPS_XPU"
+    )
     @dtypes(*all_floating_dtypes)
     def test_uniform_tensor_bounds_dtype(self, device, dtype):
         key = random.key(42, device=device)
@@ -720,6 +742,9 @@ class TestStatelessRNGDistribution(TestCase):
         self.assertEqual(actual.dtype, torch.float32)
         self.assertEqual(actual, random.uniform(key, (4, 3)), atol=0, rtol=0)
 
+    @skipXPUIf(
+        True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PHILOX_OPS_XPU"
+    )
     def test_uniform_tensor_bounds_errors(self, device):
         for mode in (contextlib.nullcontext(), FakeTensorMode()):
             with mode:
@@ -904,6 +929,9 @@ class TestStatelessRNGCompile(TestCase):
 
         self.assertEqual(f(key), random.bits(key, (100,), dtype=torch.uint64))
 
+    @skipXPUIf(
+        True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PHILOX_OPS_XPU"
+    )
     @onlyAccelerator
     @parametrize("tensor_bounds", [False, True])
     @parametrize("op", ["uniform", "normal", "randint"])
@@ -1004,6 +1032,9 @@ class TestStatelessRNGCompile(TestCase):
             key = random.key(seed, device=device)
             self.assertEqual(compiled(key), f(key))
 
+    @skipXPUIf(
+        True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PHILOX_OPS_XPU"
+    )
     def test_uniform_tensor_bounds_backward(self, device):
         if torch.device(device).type == "cuda" and not HAS_TRITON:
             self.skipTest("CUDA inductor codegen requires triton")
@@ -1022,6 +1053,9 @@ class TestStatelessRNGCompile(TestCase):
             results.append((out, low.grad, high.grad))
         self.assertEqual(results[1], results[0])
 
+    @skipXPUIf(
+        True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PHILOX_OPS_XPU"
+    )
     @dtypes(*all_floating_dtypes)
     def test_uniform_tensor_bounds_match_scalar(self, device, dtype):
         if torch.device(device).type == "cuda" and not HAS_TRITON:
@@ -1375,10 +1409,13 @@ instantiate_device_type_tests(
     TestStatelessRNGKeyFoldIn, globals(), only_for=("cpu", "cuda")
 )
 instantiate_device_type_tests(
-    TestStatelessRNGDistribution, globals(), only_for=("cpu", "cuda")
+    TestStatelessRNGDistribution,
+    globals(),
+    only_for=("cpu", "cuda", "xpu"),
+    allow_xpu=True,
 )
 instantiate_device_type_tests(
-    TestStatelessRNGCompile, globals(), only_for=("cpu", "cuda")
+    TestStatelessRNGCompile, globals(), only_for=("cpu", "cuda", "xpu"), allow_xpu=True
 )
 instantiate_device_type_tests(
     TestStatelessRNGInteger, globals(), only_for=("cpu", "cuda")
