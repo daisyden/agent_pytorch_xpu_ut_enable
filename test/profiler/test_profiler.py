@@ -342,7 +342,9 @@ if not any(e.device_type == DeviceType.CUDA for e in prof.events()):
             event_name = "cuda_sync" if torch.version.cuda else "hipDeviceSynchronize"
             self.assertTrue(
                 event_name in cats,
-                lambda msg: f"{msg}\nExpected to find {event_name} event found = {cats}",
+                lambda msg: (
+                    f"{msg}\nExpected to find {event_name} event found = {cats}"
+                ),
             )
 
         print("Testing enable_cuda_sync_events in _ExperimentalConfig")
@@ -515,18 +517,23 @@ instantiate_device_type_tests(TestProfilerCUDA, globals(), only_for=("cuda",))
 class TestProfilerAtExitCUDA(TestCase):
     hw_classification = HardwareClassification.CUDA
 
-    @unittest.skipIf(not torch.cuda.is_available(), "CUDA is required")
+    @unittest.skipIf(
+        TEST_XPU,
+        "https://github.com/intel/torch-xpu-ops/issues/XXXX_PROFILER_EXIT_PTI_FLUSH",
+    )
+    @unittest.skipIf(not torch.accelerator.is_available(), "Accelerator is required")
     def test_profiler_left_running_at_exit_cuda(self):
         # With GPU tracing still on at exit, BLAS libraries' static destructors
         # make traced runtime calls after the main thread's thread_locals are
         # destroyed. MALLOC_PERTURB_ poisons freed memory so a use of freed
         # per-thread tracer state faults instead of passing silently.
-        script = """
+        device_type = torch.accelerator.current_accelerator().type
+        script = f"""
 import torch
 from torch.profiler import profile, ProfilerActivity
-p = profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA])
+p = profile(activities=[ProfilerActivity.CPU, ProfilerActivity.{device_type.upper()}])
 p.start()
-x = torch.randn(64, 64, device="cuda")
+x = torch.randn(64, 64, device="{device_type}")
 (x @ x).sum().item()
 """
         proc = subprocess.run(
@@ -1202,7 +1209,9 @@ class TestProfiler(TestCase):
                     self.assertGreaterEqual(
                         args.get("Record function id", -1),
                         0,
-                        lambda msg: f"{msg}\nFailed finding record funciont for op = {e}",
+                        lambda msg: (
+                            f"{msg}\nFailed finding record funciont for op = {e}"
+                        ),
                     )
 
     def test_profiler_strides(self):
@@ -2636,7 +2645,9 @@ class TestProfilerDevice(TestCase):
             self.assertEqual(
                 missing,
                 set(),
-                lambda msg: f"{msg}\n{op}: metadata keys missing in trace_only: {missing}",
+                lambda msg: (
+                    f"{msg}\n{op}: metadata keys missing in trace_only: {missing}"
+                ),
             )
 
         if device_type != "cpu":
@@ -3353,7 +3364,9 @@ if KinetoStepTracker.current_step() != initial_step + 2 * niters:
                 self.assertEqual(
                     has_grid,
                     has_block,
-                    lambda msg: f"{msg}\nkernel '{name}' should provide grid and block together",
+                    lambda msg: (
+                        f"{msg}\nkernel '{name}' should provide grid and block together"
+                    ),
                 )
                 has_kernel_launch_metadata |= has_grid
             self.assertTrue(
@@ -4783,7 +4796,9 @@ class TestProfilerEventsParityCudaOnly(TestCase):
             self.assertNotIn(
                 key,
                 event_records,
-                lambda msg: f"{msg}\nDuplicate FunctionEvent record key encountered: {key}",
+                lambda msg: (
+                    f"{msg}\nDuplicate FunctionEvent record key encountered: {key}"
+                ),
             )
             event_records[key] = metadata_dict_from_function_event(fe)
 
@@ -4817,7 +4832,9 @@ class TestProfilerEventsParityCudaOnly(TestCase):
             self.assertNotIn(
                 key,
                 json_records,
-                lambda msg: f"{msg}\nDuplicate Chrome trace record key encountered: {key}",
+                lambda msg: (
+                    f"{msg}\nDuplicate Chrome trace record key encountered: {key}"
+                ),
             )
             json_records[key] = metadata_dict_from_trace_args(args)
 
@@ -4860,7 +4877,9 @@ For a model PR to follow, see: https://github.com/pytorch/pytorch/pull/180100
             self.assertEqual(
                 actual_meta,
                 expected_meta,
-                lambda msg: f"{msg}\n{key}: structured metadata differs between events() and Chrome trace JSON",
+                lambda msg: (
+                    f"{msg}\n{key}: structured metadata differs between events() and Chrome trace JSON"
+                ),
             )
 
     def test_typed_metadata_matches_chrome_trace(self):
@@ -5100,7 +5119,9 @@ class TestPythonChromeTraceExport(TestCase):
         self.assertEqual(
             len(kineto_acts),
             len(py_acts),
-            lambda msg: f"{msg}\nActivity event count mismatch: kineto={len(kineto_acts)}, python={len(py_acts)}",
+            lambda msg: (
+                f"{msg}\nActivity event count mismatch: kineto={len(kineto_acts)}, python={len(py_acts)}"
+            ),
         )
 
         from collections import Counter
@@ -5132,7 +5153,9 @@ class TestPythonChromeTraceExport(TestCase):
             self.assertEqual(
                 ke,
                 pe,
-                lambda msg: f"{msg}\nEvent mismatch for {ke['cat']}::{ke['name']} at ts={ke['ts']}",
+                lambda msg: (
+                    f"{msg}\nEvent mismatch for {ke['cat']}::{ke['name']} at ts={ke['ts']}"
+                ),
             )
 
         # Flow event parity (ph, id, cat).
@@ -5558,7 +5581,7 @@ class TestChromeTraceInlineAnnotations(TestCase):
 
 
 @unittest.skipIf(not kineto_available(), "Kineto is required")
-@unittest.skipIf(not torch.cuda.is_available(), "CUDA is required")
+@unittest.skipIf(not torch.accelerator.is_available(), "Accelerator is required")
 @instantiate_parametrized_tests
 class TestMetadataJsonFormatCUDA(TestCase):
     """Guard the format of ITraceActivity.metadataJson() for kernel events.
@@ -5642,21 +5665,28 @@ class TestMetadataJsonFormatCUDA(TestCase):
             self.assertIsInstance(
                 parsed[key],
                 int,
-                lambda msg: f"{msg}\nExpected int for '{key}', got {type(parsed[key]).__name__}",
+                lambda msg: (
+                    f"{msg}\nExpected int for '{key}', got {type(parsed[key]).__name__}"
+                ),
             )
         for key in ["grid", "block"]:
             self.assertIsInstance(parsed[key], list)
             self.assertEqual(len(parsed[key]), 3)
+
+    def _device_activity(self):
+        return getattr(
+            ProfilerActivity, torch.accelerator.current_accelerator().type.upper()
+        )
 
     def _profile(self, fn):
         # The first session can miss GPU records while CUPTI initializes (see
         # _get_kernel_metadata), so one warmup session is always discarded.
         for _ in range(2):
             with profile(
-                activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA]
+                activities=[ProfilerActivity.CPU, self._device_activity()]
             ) as prof:
                 fn()
-                torch.cuda.synchronize()
+                torch.accelerator.synchronize()
         return prof
 
     def _profile_gpu_activities(self, fn, types):
@@ -5749,6 +5779,10 @@ class TestMetadataJsonFormatCUDA(TestCase):
             if act.type() == "kernel":
                 self.assertNotIn("__amd_rocclr_", act.name())
 
+    @unittest.skipIf(
+        TEST_XPU,
+        "https://github.com/intel/torch-xpu-ops/issues/XXXX_PROFILER_MEMSET_EVENTS",
+    )
     @parametrize("numel", [5, 1024])
     def test_runtime_memsets_are_not_kernels(self, numel):
         # zero_() on a dense tensor calls cudaMemsetAsync, which ROCm
@@ -5756,7 +5790,7 @@ class TestMetadataJsonFormatCUDA(TestCase):
         # add up to the requested size, never as kernels.  20 bytes is not a
         # multiple of 16, which some runtimes split into two dispatches.
         # (Memset nodes replayed from a graph are still reported as kernels.)
-        x = torch.empty(numel, device="cuda")
+        x = torch.empty(numel, device=torch.accelerator.current_accelerator())
         gpu_acts = self._profile_gpu_activities(x.zero_, ("kernel", "gpu_memset"))
         memsets = [act for act in gpu_acts if act.type() == "gpu_memset"]
         self.assertTrue(memsets, f"expected a gpu_memset event, got {gpu_acts}")
@@ -5766,10 +5800,14 @@ class TestMetadataJsonFormatCUDA(TestCase):
             if act.type() == "kernel":
                 self.assertNotIn("__amd_rocclr_", act.name())
 
+    @unittest.skipIf(
+        TEST_XPU,
+        "https://github.com/intel/torch-xpu-ops/issues/XXXX_PROFILER_MEMSET_EVENTS",
+    )
     def test_runtime_memsets_have_flows(self):
         # The memset API call must start an async CPU->GPU flow that ends on
         # each of its gpu_memset events.
-        x = torch.empty(1024, device="cuda")
+        x = torch.empty(1024, device=torch.accelerator.current_accelerator())
         with TemporaryFileName(mode="w+") as fname:
             self._profile(x.zero_).export_chrome_trace(fname)
             with open(fname) as f:
