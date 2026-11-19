@@ -22,6 +22,7 @@ from torch.testing._internal.common_cuda import evaluate_gfx_arch_within, SM70Or
 from torch.testing._internal.common_device_type import (
     instantiate_device_type_tests,
     onlyCUDA,
+    skipXPUIf,
 )
 from torch.testing._internal.common_utils import (
     instantiate_parametrized_tests,
@@ -35,7 +36,9 @@ from torch.testing._internal.common_utils import (
     parametrize,
     run_tests,
     skipIfRocm,
+    subtest,
     TEST_CUDA,
+    TEST_XPU,
     TestCase,
     xfailIfNoAcceleratorTriton,
 )
@@ -987,14 +990,15 @@ def xor_words(pairs, maximum, outputs):
     return words
 
 
-@unittest.skipIf(not TEST_CUDA, "CUDA not available")
-@unittest.skipIf(not SM70OrLater, "Requires SM70+")
+@unittest.skipIf(not (TEST_CUDA or TEST_XPU), "CUDA or XPU not available")
+@unittest.skipIf(not (TEST_XPU or SM70OrLater), "Requires SM70+")
 @unittest.skipIf(not has_triton(), "Requires Triton")
 class TestInlineAsmConcat(TestCase):
     def setUp(self):
         super().setUp()
         self.enterContext(config.patch(cat_fuse_computed_input_copies=True))
 
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_INLINE_ASM_PTX_ONLY")  # fmt: skip
     @parametrize("multiple_outputs", [False, True])
     @config.patch(
         {
@@ -1036,6 +1040,7 @@ class TestInlineAsmConcat(TestCase):
         self.assertEqual(torch.compile(fn, fullgraph=True)(x), expected)
         self.assertEqual(metrics.generated_kernel_count, 1)
 
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_INLINE_ASM_PTX_ONLY")  # fmt: skip
     @parametrize("outputs,dim", [(2, 0), (6, 1)])
     @config.patch(
         {
@@ -1071,7 +1076,9 @@ class TestInlineAsmConcat(TestCase):
         self.assertEqual(torch.compile(fn, fullgraph=True)(x), expected)
         self.assertEqual(metrics.generated_kernel_count, 1)
 
-    @parametrize("use_asm", [False, True])
+    # fmt: off
+    @parametrize("use_asm", [False, subtest(True, decorators=[skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_INLINE_ASM_PTX_ONLY")])])
+    # fmt: on
     @parametrize(
         "width,multi_kernel,dynamic_batch",
         [(1024, 0, False), (1024, 1, True), (6144, 0, True), (6144, 1, False)],
@@ -1177,7 +1184,9 @@ class TestInlineAsmConcat(TestCase):
 
 
 # The inline asm strings are PTX or AMDGCN.
-instantiate_device_type_tests(TestInlineAsmConcat, globals(), only_for="cuda")
+instantiate_device_type_tests(
+    TestInlineAsmConcat, globals(), only_for=("cuda", "xpu"), allow_xpu=True
+)
 
 
 if __name__ == "__main__":
