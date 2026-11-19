@@ -357,10 +357,7 @@ if not any(e.device_type == DeviceType.CUDA for e in prof.events()):
 
     @skipIfTorchDynamo("profiler gets ignored if dynamo activated")
     @unittest.skipIf(not kineto_available(), "Kineto is required")
-    @unittest.skipIf(
-        not torch.version.cuda or int(torch.version.cuda.split(".")[0]) < 13,
-        "CUDA 13+ is required",
-    )
+    @unittest.skipIf(not torch.version.cuda or int(torch.version.cuda.split(".")[0]) < 13, "CUDA 13+ is required")
     @patch.dict(os.environ, {"TEARDOWN_CUPTI": "0"})
     def test_profiler_cuda_stream_wait_event_correlation(self):
         producer, consumer = torch.cuda.Stream(), torch.cuda.Stream()
@@ -515,10 +512,7 @@ instantiate_device_type_tests(TestProfilerCUDA, globals(), only_for=("cuda",))
 class TestProfilerAtExitCUDA(TestCase):
     hw_classification = HardwareClassification.CUDA
 
-    @unittest.skipIf(
-        TEST_XPU,
-        "https://github.com/intel/torch-xpu-ops/issues/XXXX_PROFILER_EXIT_PTI_FLUSH",
-    )
+    @unittest.skipIf(TEST_XPU, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PROFILER_EXIT_PTI_FLUSH")
     @unittest.skipIf(not torch.accelerator.is_available(), "Accelerator is required")
     def test_profiler_left_running_at_exit_cuda(self):
         # With GPU tracing still on at exit, BLAS libraries' static destructors
@@ -5759,10 +5753,7 @@ class TestMetadataJsonFormatCUDA(TestCase):
             if act.type() == "kernel":
                 self.assertNotIn("__amd_rocclr_", act.name())
 
-    @unittest.skipIf(
-        TEST_XPU,
-        "https://github.com/intel/torch-xpu-ops/issues/XXXX_PROFILER_MEMSET_EVENTS",
-    )
+    @unittest.skipIf(TEST_XPU, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PROFILER_MEMSET_EVENTS")
     @parametrize("numel", [5, 1024])
     def test_runtime_memsets_are_not_kernels(self, numel):
         # zero_() on a dense tensor calls cudaMemsetAsync, which ROCm
@@ -5780,10 +5771,7 @@ class TestMetadataJsonFormatCUDA(TestCase):
             if act.type() == "kernel":
                 self.assertNotIn("__amd_rocclr_", act.name())
 
-    @unittest.skipIf(
-        TEST_XPU,
-        "https://github.com/intel/torch-xpu-ops/issues/XXXX_PROFILER_MEMSET_EVENTS",
-    )
+    @unittest.skipIf(TEST_XPU, "https://github.com/intel/torch-xpu-ops/issues/XXXX_PROFILER_MEMSET_EVENTS")
     def test_runtime_memsets_have_flows(self):
         # The memset API call must start an async CPU->GPU flow that ends on
         # each of its gpu_memset events.
