@@ -36,7 +36,6 @@ from torch.testing._internal.common_utils import (
     parametrize,
     run_tests,
     skipIfRocm,
-    subtest,
     TEST_CUDA,
     TEST_XPU,
     TestCase,
@@ -1076,9 +1075,7 @@ class TestInlineAsmConcat(TestCase):
         self.assertEqual(torch.compile(fn, fullgraph=True)(x), expected)
         self.assertEqual(metrics.generated_kernel_count, 1)
 
-    # fmt: off
-    @parametrize("use_asm", [False, subtest(True, decorators=[skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_INLINE_ASM_PTX_ONLY")])])
-    # fmt: on
+    @parametrize("use_asm", [False, True])
     @parametrize(
         "width,multi_kernel,dynamic_batch",
         [(1024, 0, False), (1024, 1, True), (6144, 0, True), (6144, 1, False)],
@@ -1086,6 +1083,8 @@ class TestInlineAsmConcat(TestCase):
     def test_normal_choices_stack_reshape(
         self, device, use_asm, width, multi_kernel, dynamic_batch
     ):
+        if use_asm and TEST_XPU:  # skipIf: XPU has no PTX/AMDGCN inline asm
+            self.skipTest("https://github.com/intel/torch-xpu-ops/issues/XXXX_INLINE_ASM_PTX_ONLY")  # fmt: skip
         asm, constraints = combine_inputs_asm(3)
 
         def fn(x, native=use_asm):
