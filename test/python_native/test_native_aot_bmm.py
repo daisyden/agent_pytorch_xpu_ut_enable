@@ -10,7 +10,6 @@ import unittest
 import unittest.mock as mock
 
 import torch
-from torch.testing._internal.common_cuda import TEST_CUDA
 from torch.testing._internal.common_device_type import (
     dtypes,
     instantiate_device_type_tests,
@@ -26,19 +25,25 @@ from torch.testing._internal.common_utils import (
     TestCase,
 )
 
+DEVICE = (
+    torch.accelerator.current_accelerator().type
+    if torch.accelerator.is_available()
+    else "cuda"
+)
+
 
 def _ran_aot(fn) -> bool:
     # Both layers launch the same-named kernel, so attribution needs the JIT side
     # masked rather than a profiler name match.
     from torch.profiler import profile, ProfilerActivity
 
-    with profile(activities=[ProfilerActivity.CUDA]) as prof:
+    with profile(activities=[getattr(ProfilerActivity, DEVICE.upper())]) as prof:
         fn()
-        torch.cuda.synchronize()
+        torch.accelerator.synchronize()
     return any(
         "_bmm_outer_product_aot_kernel" in e.name
         for e in prof.events()
-        if e.device_type.name == "CUDA"
+        if e.device_type.name == DEVICE.upper()
     )
 
 
@@ -78,14 +83,14 @@ def _jit_masked():
             pn.triton.enable()
 
 
-@unittest.skipUnless(TEST_CUDA, "CUDA required")
+@unittest.skipUnless(torch.accelerator.is_available(), "accelerator required")
 class TestNativeAotBmmOuter(TestCase):
     hw_classification = HardwareClassification.CUDA
 
     def _outer(self, B, M, N, dtype=torch.float32, seed=0):
         torch.manual_seed(seed)
-        a = torch.randn(B, M, 1, device="cuda", dtype=dtype)
-        b = torch.randn(B, 1, N, device="cuda", dtype=dtype)
+        a = torch.randn(B, M, 1, device=DEVICE, dtype=dtype)
+        b = torch.randn(B, 1, N, device=DEVICE, dtype=dtype)
         return a, b
 
     def _uncovered_shapes(self):
@@ -95,8 +100,8 @@ class TestNativeAotBmmOuter(TestCase):
             "fp16": self._outer(8, 48, 256, torch.float16),
             "small N": self._outer(8, 48, 64),
             "K>1 (not outer)": (
-                torch.randn(8, 48, 4, device="cuda"),
-                torch.randn(8, 4, 256, device="cuda"),
+                torch.randn(8, 48, 4, device=DEVICE),
+                torch.randn(8, 4, 256, device=DEVICE),
             ),
         }
 
@@ -107,16 +112,16 @@ class TestNativeAotBmmOuter(TestCase):
         torch.manual_seed(7)
         return {
             "a inner stride 2": (
-                torch.randn(16, 48, 2, device="cuda")[:, :, :1],
-                torch.randn(16, 1, 256, device="cuda"),
+                torch.randn(16, 48, 2, device=DEVICE)[:, :, :1],
+                torch.randn(16, 1, 256, device=DEVICE),
             ),
             "b inner stride 2": (
-                torch.randn(16, 48, 1, device="cuda"),
-                torch.randn(16, 1, 512, device="cuda")[:, :, ::2],
+                torch.randn(16, 48, 1, device=DEVICE),
+                torch.randn(16, 1, 512, device=DEVICE)[:, :, ::2],
             ),
             "a offset 4B": (
-                torch.randn(16, 49, 1, device="cuda")[:, 1:, :],
-                torch.randn(16, 1, 256, device="cuda"),
+                torch.randn(16, 49, 1, device=DEVICE)[:, 1:, :],
+                torch.randn(16, 1, 256, device=DEVICE),
             ),
         }
 
@@ -157,6 +162,9 @@ class TestNativeAotBmmOuter(TestCase):
                 out = torch.bmm(a, b)
             self.assertEqual(out, _reference(a, b), atol=0, rtol=0)
 
+    @unittest.skipIf(
+        DEVICE == "xpu", "https://github.com/intel/torch-xpu-ops/issues/5662"
+    )
     def test_mixed_dtypes_raise_instead_of_being_served(self):
         a, b = self._outer(8, 48, 256)
         b16 = self._outer(8, 48, 256, torch.bfloat16)[1]
@@ -164,7 +172,7 @@ class TestNativeAotBmmOuter(TestCase):
             torch.bmm(a, b16)
         with self.assertRaises(RuntimeError):
             torch.bmm(
-                a, b, out=torch.empty(8, 48, 256, device="cuda", dtype=torch.bfloat16)
+                a, b, out=torch.empty(8, 48, 256, device=DEVICE, dtype=torch.bfloat16)
             )
 
     @lazy_skip_if(
@@ -198,7 +206,7 @@ class TestNativeAotBmmOuter(TestCase):
     @unittest.skipIf(
         torch.cuda.device_count() < 2, "requires at least 2 visible CUDA devices"
     )
-    @skipIfNoNativeAot("bmm", device="cuda:1")
+    @skipIfNoNativeAot("bmm", device=f"{DEVICE}:1")
     def test_a_covered_shape_runs_on_a_non_current_device(self):
         # The launcher caches one CUfunction per device and establishes a context if
         # the calling thread has none; both are per-device state a single-GPU run
@@ -207,14 +215,14 @@ class TestNativeAotBmmOuter(TestCase):
         try:
             torch.cuda.set_device(0)
             torch.manual_seed(13)
-            a = torch.randn(16, 48, 1, device="cuda:1")
-            b = torch.randn(16, 1, 256, device="cuda:1")
+            a = torch.randn(16, 48, 1, device=f"{DEVICE}:1")
+            b = torch.randn(16, 1, 256, device=f"{DEVICE}:1")
             ref = _reference(a, b)
             with _jit_masked():
                 self.assertTrue(_ran_aot(lambda: torch.bmm(a, b)))
                 out = torch.bmm(a, b)
             self.assertEqual(torch.cuda.current_device(), 0)
-            self.assertEqual(out.device, torch.device("cuda:1"))
+            self.assertEqual(out.device, torch.device(f"{DEVICE}:1"))
             self.assertEqual(out, ref, atol=0, rtol=0)
         finally:
             torch.cuda.set_device(old_device)
@@ -268,8 +276,8 @@ class TestNativeAotBmmOuter(TestCase):
     @skipIfNoNativeAot("bmm")
     def test_a_transposed_view_is_served_and_matches(self):
         torch.manual_seed(1)
-        a = torch.randn(16, 1, 48, device="cuda").transpose(1, 2)
-        b = torch.randn(16, 256, 1, device="cuda").transpose(1, 2)
+        a = torch.randn(16, 1, 48, device=DEVICE).transpose(1, 2)
+        b = torch.randn(16, 256, 1, device=DEVICE).transpose(1, 2)
         with _jit_masked():
             self.assertTrue(_ran_aot(lambda: torch.bmm(a, b)))
             out = torch.bmm(a, b)
@@ -393,8 +401,12 @@ class TestNativeBmmJit(TestCase):
 
 instantiate_parametrized_tests(TestNativeAotBmmOuter)
 instantiate_parametrized_tests(TestNativeAotBmmDeclaration)
-instantiate_device_type_tests(TestNativeAotBmmOut, globals(), only_for="cuda")
-instantiate_device_type_tests(TestNativeBmmJit, globals(), only_for="cuda")
+instantiate_device_type_tests(
+    TestNativeAotBmmOut, globals(), only_for=("cuda", "xpu"), allow_xpu=True
+)
+instantiate_device_type_tests(
+    TestNativeBmmJit, globals(), only_for=("cuda", "xpu"), allow_xpu=True
+)
 
 
 if __name__ == "__main__":
