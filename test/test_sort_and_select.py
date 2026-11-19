@@ -1765,7 +1765,9 @@ class TestSortAndSelectCUDA(TestCase):
 
 
 instantiate_device_type_tests(TestSortAndSelectDevice, globals())
-instantiate_device_type_tests(TestSortAndSelectCUDA, globals(), only_for="cuda")
+instantiate_device_type_tests(
+    TestSortAndSelectCUDA, globals(), only_for=("cuda", "xpu"), allow_xpu=True
+)
 
 if __name__ == "__main__":
     run_tests()
