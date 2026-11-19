@@ -342,9 +342,7 @@ if not any(e.device_type == DeviceType.CUDA for e in prof.events()):
             event_name = "cuda_sync" if torch.version.cuda else "hipDeviceSynchronize"
             self.assertTrue(
                 event_name in cats,
-                lambda msg: (
-                    f"{msg}\nExpected to find {event_name} event found = {cats}"
-                ),
+                lambda msg: f"{msg}\nExpected to find {event_name} event found = {cats}",
             )
 
         print("Testing enable_cuda_sync_events in _ExperimentalConfig")
@@ -1209,9 +1207,7 @@ class TestProfiler(TestCase):
                     self.assertGreaterEqual(
                         args.get("Record function id", -1),
                         0,
-                        lambda msg: (
-                            f"{msg}\nFailed finding record funciont for op = {e}"
-                        ),
+                        lambda msg: f"{msg}\nFailed finding record funciont for op = {e}",
                     )
 
     def test_profiler_strides(self):
@@ -2645,9 +2641,7 @@ class TestProfilerDevice(TestCase):
             self.assertEqual(
                 missing,
                 set(),
-                lambda msg: (
-                    f"{msg}\n{op}: metadata keys missing in trace_only: {missing}"
-                ),
+                lambda msg: f"{msg}\n{op}: metadata keys missing in trace_only: {missing}",
             )
 
         if device_type != "cpu":
@@ -3364,9 +3358,7 @@ if KinetoStepTracker.current_step() != initial_step + 2 * niters:
                 self.assertEqual(
                     has_grid,
                     has_block,
-                    lambda msg: (
-                        f"{msg}\nkernel '{name}' should provide grid and block together"
-                    ),
+                    lambda msg: f"{msg}\nkernel '{name}' should provide grid and block together",
                 )
                 has_kernel_launch_metadata |= has_grid
             self.assertTrue(
@@ -4796,9 +4788,7 @@ class TestProfilerEventsParityCudaOnly(TestCase):
             self.assertNotIn(
                 key,
                 event_records,
-                lambda msg: (
-                    f"{msg}\nDuplicate FunctionEvent record key encountered: {key}"
-                ),
+                lambda msg: f"{msg}\nDuplicate FunctionEvent record key encountered: {key}",
             )
             event_records[key] = metadata_dict_from_function_event(fe)
 
@@ -4832,9 +4822,7 @@ class TestProfilerEventsParityCudaOnly(TestCase):
             self.assertNotIn(
                 key,
                 json_records,
-                lambda msg: (
-                    f"{msg}\nDuplicate Chrome trace record key encountered: {key}"
-                ),
+                lambda msg: f"{msg}\nDuplicate Chrome trace record key encountered: {key}",
             )
             json_records[key] = metadata_dict_from_trace_args(args)
 
@@ -4877,9 +4865,7 @@ For a model PR to follow, see: https://github.com/pytorch/pytorch/pull/180100
             self.assertEqual(
                 actual_meta,
                 expected_meta,
-                lambda msg: (
-                    f"{msg}\n{key}: structured metadata differs between events() and Chrome trace JSON"
-                ),
+                lambda msg: f"{msg}\n{key}: structured metadata differs between events() and Chrome trace JSON",
             )
 
     def test_typed_metadata_matches_chrome_trace(self):
@@ -5119,9 +5105,7 @@ class TestPythonChromeTraceExport(TestCase):
         self.assertEqual(
             len(kineto_acts),
             len(py_acts),
-            lambda msg: (
-                f"{msg}\nActivity event count mismatch: kineto={len(kineto_acts)}, python={len(py_acts)}"
-            ),
+            lambda msg: f"{msg}\nActivity event count mismatch: kineto={len(kineto_acts)}, python={len(py_acts)}",
         )
 
         from collections import Counter
@@ -5153,9 +5137,7 @@ class TestPythonChromeTraceExport(TestCase):
             self.assertEqual(
                 ke,
                 pe,
-                lambda msg: (
-                    f"{msg}\nEvent mismatch for {ke['cat']}::{ke['name']} at ts={ke['ts']}"
-                ),
+                lambda msg: f"{msg}\nEvent mismatch for {ke['cat']}::{ke['name']} at ts={ke['ts']}",
             )
 
         # Flow event parity (ph, id, cat).
@@ -5665,9 +5647,7 @@ class TestMetadataJsonFormatCUDA(TestCase):
             self.assertIsInstance(
                 parsed[key],
                 int,
-                lambda msg: (
-                    f"{msg}\nExpected int for '{key}', got {type(parsed[key]).__name__}"
-                ),
+                lambda msg: f"{msg}\nExpected int for '{key}', got {type(parsed[key]).__name__}",
             )
         for key in ["grid", "block"]:
             self.assertIsInstance(parsed[key], list)
