@@ -155,7 +155,7 @@ def _pftrace_render_stage_extra(packets):
     return per_stage
 
 
-@unittest.skipIf(not TEST_CUPTI_PYTHON, "requires cupti-python")
+@unittest.skipIf(not TEST_CUPTI_PYTHON, "https://github.com/intel/torch-xpu-ops/issues/XXXX_CUPTI_PYTHON_NVIDIA_ONLY")
 class TestCuspyRecordsCUDA(TestCase):
     """Pure Cuspy + metadata unit tests (no GPU)."""
 
@@ -193,7 +193,7 @@ class TestCuspyRecordsCUDA(TestCase):
         self.assertEqual(fields[kernel], frozenset({0, int(Kernel.START)}))
         self.assertEqual(fields[memcpy], all_memcpy)
 
-    @unittest.skipIf(not TEST_CUPTI_PYTHON, "requires the cupti python bindings")
+    @unittest.skipIf(not TEST_CUPTI_PYTHON, "https://github.com/intel/torch-xpu-ops/issues/XXXX_CUPTI_PYTHON_NVIDIA_ONLY")
     def test_annotation_column_resolves_source_node_first(self):
         # A graph's annotations sit under its capture node ids or its exec ones depending on
         # that capture's annotation_config["key_by"], and one trace can carry both, so the
@@ -215,7 +215,7 @@ class TestCuspyRecordsCUDA(TestCase):
             list(_resolve_annotation_column(None, gnid, src_gnid)), [None] * 4
         )
 
-    @unittest.skipIf(not TEST_CUPTI_PYTHON, "requires the cupti python bindings")
+    @unittest.skipIf(not TEST_CUPTI_PYTHON, "https://github.com/intel/torch-xpu-ops/issues/XXXX_CUPTI_PYTHON_NVIDIA_ONLY")
     def test_configure_and_get_config(self):
         # configure() sets the process-wide config get_config() reports; it is first-come-
         # first-serve. Pure config -- no session, only the cupti python bindings (not
@@ -2645,7 +2645,7 @@ class TestCuspyRecordsCUDA(TestCase):
         self.assertEqual(submission_id_sets[0], {node_a_event_id})
 
 
-@unittest.skipIf(not TEST_CUPTI_PYTHON, "requires cupti-python")
+@unittest.skipIf(not TEST_CUPTI_PYTHON, "https://github.com/intel/torch-xpu-ops/issues/XXXX_CUPTI_PYTHON_NVIDIA_ONLY")
 @instantiate_parametrized_tests
 class TestCuspyHes(TestCase):
     hw_classification = HardwareClassification.GENERIC
@@ -4312,7 +4312,7 @@ cuspy_core.enable_hes_early()
         }
         self.assertIn("cuspy_region", user_names)
 
-    @unittest.skipIf(not TEST_CUPTI_PYTHON, "requires cupti-python")
+    @unittest.skipIf(not TEST_CUPTI_PYTHON, "https://github.com/intel/torch-xpu-ops/issues/XXXX_CUPTI_PYTHON_NVIDIA_ONLY")
     @_isolated
     def test_cuspy_observer_registration_failure_is_graceful(self):
         from torch.profiler._cuspy import core as cuspy_core
@@ -4337,7 +4337,7 @@ cuspy_core.enable_hes_early()
             prof.wait_for_exports()
         self.assertIn(str(error), logs.output[0])
 
-    @unittest.skipIf(not TEST_CUPTI_PYTHON, "requires cupti-python")
+    @unittest.skipIf(not TEST_CUPTI_PYTHON, "https://github.com/intel/torch-xpu-ops/issues/XXXX_CUPTI_PYTHON_NVIDIA_ONLY")
     @unittest.skipIf(not TEST_CUPTI_V13_5, "requires CUDA >= 13.5 + libcupti >= 13.5")
     @_isolated
     def test_cuspy_zstd_export(self):
@@ -4363,7 +4363,7 @@ cuspy_core.enable_hes_early()
                 trace = json.load(f)
             self.assertTrue(any(e.get("cat") == "kernel" for e in trace["traceEvents"]))
 
-    @unittest.skipIf(not TEST_CUPTI_PYTHON, "requires cupti-python")
+    @unittest.skipIf(not TEST_CUPTI_PYTHON, "https://github.com/intel/torch-xpu-ops/issues/XXXX_CUPTI_PYTHON_NVIDIA_ONLY")
     @unittest.skipIf(not TEST_CUPTI_V13_5, "requires CUDA >= 13.5 + libcupti >= 13.5")
     @_isolated
     def test_cuspy_sync_export_default(self):
@@ -5085,7 +5085,7 @@ class TestCuspyNative(TestCase):
         pyprof._cuspy.return_buffer(item_b[0])
 
 
-@unittest.skipIf(not TEST_CUPTI_PYTHON, "requires cupti-python")
+@unittest.skipIf(not TEST_CUPTI_PYTHON, "https://github.com/intel/torch-xpu-ops/issues/XXXX_CUPTI_PYTHON_NVIDIA_ONLY")
 class TestCuspyClockCUDA(TestCase):
     """Clock-alignment math for the cuspy -- record timestamps -> unix-epoch ns on
     kineto's axis. Drives the production _SynchronizedClock directly (its calibrate() reads
