@@ -6124,11 +6124,14 @@ class TestGuardSerialization(TestGuardSerializationBase):
         self.assertEqual(source, restored)
 
 
+_acc_type = acc.type if (acc := torch.accelerator.current_accelerator()) else "cpu"
+
+
 @torch._dynamo.config.patch({"strict_precompile": True})
 class TestGuardSerializationCUDA(TestGuardSerializationBase):
     hw_classification = HardwareClassification.CUDA
 
-    @unittest.skipIf(not torch.cuda.is_available(), "requires CUDA")
+    @unittest.skipIf(not torch.accelerator.is_available(), "requires an accelerator")
     @torch.compiler.config.patch(compile_on_one_rank=True)
     def test_tensor_match_current_device(self):
         # The relative-device decision must survive a load on a rank whose current
@@ -6142,9 +6145,9 @@ class TestGuardSerializationCUDA(TestGuardSerializationBase):
         def f(x: torch.Tensor):
             return x + 1
 
-        with torch.cuda.device(0):
+        with torch.accelerator.device_index(0):
             ref, _ = self._test_serialization(
-                "TENSOR_MATCH", f, torch.randn(4, device="cuda:0")
+                "TENSOR_MATCH", f, torch.randn(4, device=f"{_acc_type}:0")
             )
 
         with mock.patch("torch.accelerator.current_device_index", return_value=1):
@@ -6153,11 +6156,11 @@ class TestGuardSerializationCUDA(TestGuardSerializationBase):
 
         self.assertIn("device=current", "\n".join(loaded.code_parts))
 
-        with torch.cuda.device(0):
-            inputs = {"x": torch.randn(4, device="cuda:0")}
+        with torch.accelerator.device_index(0):
+            inputs = {"x": torch.randn(4, device=f"{_acc_type}:0")}
             self._test_check_fn(ref, loaded, inputs, True)
 
-    @unittest.skipIf(not torch.cuda.is_available(), "requires CUDA")
+    @unittest.skipIf(not torch.accelerator.is_available(), "requires an accelerator")
     def test_tensor_match_current_device_survives_config_change_on_load(self):
         # Whether the index is pinned or relative belongs to the saved guard, not to
         # the loading process. Rebuilding from the loader's own compile_on_one_rank
@@ -6173,11 +6176,11 @@ class TestGuardSerializationCUDA(TestGuardSerializationBase):
         for saved_with_coor in (True, False):
             with (
                 torch.compiler.config.patch(compile_on_one_rank=saved_with_coor),
-                torch.cuda.device(0),
+                torch.accelerator.device_index(0),
             ):
                 torch._dynamo.reset()
                 self._test_serialization(
-                    "TENSOR_MATCH", f, torch.randn(4, device="cuda:0")
+                    "TENSOR_MATCH", f, torch.randn(4, device=f"{_acc_type}:0")
                 )
                 saved_state = self._cached_guards_state
                 saved_code = self._cached_f_code
