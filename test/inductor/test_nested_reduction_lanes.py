@@ -630,12 +630,21 @@ class TestNestedLaneSplits(NestedLaneTestCase):
 
 
 # The inline asm strings are PTX or AMDGCN.
-instantiate_device_type_tests(TestRecursiveLaneSplit, globals(), only_for="cuda")
+instantiate_device_type_tests(
+    TestRecursiveLaneSplit, globals(), only_for=("cuda", "xpu"), allow_xpu=True
+)
+# skipIf XPU: PTX inline asm, https://github.com/intel/torch-xpu-ops/issues/XXXX_NESTED_LANES_PTX_ASM
 instantiate_device_type_tests(TestNestedAsmLaneInputs, globals(), only_for="cuda")
 
-instantiate_device_type_tests(TestPitchedLaneSources, globals(), only_for=GPU_TYPE)
-instantiate_device_type_tests(TestNestedLaneForwarding, globals(), only_for=GPU_TYPE)
-instantiate_device_type_tests(TestNestedLaneSplits, globals(), only_for=GPU_TYPE)
+instantiate_device_type_tests(
+    TestPitchedLaneSources, globals(), only_for=GPU_TYPE, allow_xpu=True
+)
+instantiate_device_type_tests(
+    TestNestedLaneForwarding, globals(), only_for=GPU_TYPE, allow_xpu=True
+)
+instantiate_device_type_tests(
+    TestNestedLaneSplits, globals(), only_for=GPU_TYPE, allow_xpu=True
+)
 
 
 if __name__ == "__main__":
