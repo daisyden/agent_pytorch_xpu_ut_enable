@@ -1014,7 +1014,8 @@ class TestFullyShard1DTrainingCompose(FSDPTest):
 
     @skip_if_lt_x_gpu(2)
     @compiled_fsdp_test(compile_compute_on_module=Transformer)
-    @xfailIf(TEST_XPU)  # https://github.com/intel/torch-xpu-ops/issues/1661
+    # https://github.com/intel/torch-xpu-ops/issues/XXXX_FSDP_AC_PARITY
+    @xfailIf(TEST_XPU)  # issues/XXXX_FSDP_AC_PARITY
     def test_train_parity_with_activation_checkpointing(self):
         """
         Tests train parity against DDP when composing with activation
