@@ -329,6 +329,15 @@ class TestFunctionalizationRngOps(TestCase):
         # We can't check accuracy here because rand_like generated different rand numbers than dropout
         aot_fn(x)
 
+
+instantiate_device_type_tests(TestFunctionalizationRngOps, globals(), only_for="cuda")
+
+
+class TestFunctionalizationRngOpsAccelerator(TestCase):
+    """Rng-functionalization tests that are not tied to the CUDA Philox RNG."""
+
+    hw_classification = HardwareClassification.ACCELERATOR
+
     @dtypes(torch.float32)
     def test_checkpoint_with_unused_rng_in_backward(self, dtype, device):
         # Test that RNG ops in checkpointed regions that are not needed for
@@ -375,7 +384,9 @@ class TestFunctionalizationRngOps(TestCase):
         self.assertEqual(x.grad, x_clone.grad)
 
 
-instantiate_device_type_tests(TestFunctionalizationRngOps, globals(), only_for="cuda")
+instantiate_device_type_tests(
+    TestFunctionalizationRngOpsAccelerator, globals(), except_for="cpu", allow_xpu=True
+)
 
 
 class NegativeTest(TestCase):
