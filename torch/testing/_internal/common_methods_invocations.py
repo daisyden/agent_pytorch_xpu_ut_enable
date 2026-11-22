@@ -17031,6 +17031,10 @@ op_db: list[OpInfo] = [
            ),
            sample_inputs_func=sample_inputs_max_pool,
            skips=(
+               # The decomposition returns NotImplemented on XPU by design (pytorch#182619),
+               # which test_decomp cannot handle.
+               DecorateInfo(unittest.skip("https://github.com/intel/torch-xpu-ops/issues/XXXX_MAXPOOL_DECOMP_XPU"),
+                            "TestDecomp", device_type="xpu"),
                # We've defined a custom op here, and we don't handle the case where we receive an out kwarg
                DecorateInfo(unittest.skip("Skipped!"), "TestCommon", "test_out"),
                DecorateInfo(unittest.expectedFailure, 'TestCommon', 'test_out_warning'),
