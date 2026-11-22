@@ -47,10 +47,7 @@ from torch.testing._internal.common_utils import (
     parametrize,
 )
 from torch.testing._internal.inductor_utils import GPU_TYPE
-from torch.testing._internal.triton_utils import (
-    requires_cuda_and_triton,
-    requires_gpu_and_triton,
-)
+from torch.testing._internal.triton_utils import requires_gpu_and_triton
 
 
 try:
@@ -64,6 +61,22 @@ except ImportError:
 
 
 trace_log = logging.getLogger("torch.__trace")
+
+# Kineto names its device-side rows per backend, so the accelerator-wide tests
+# below have to look up the activity and the launch categories for GPU_TYPE
+# instead of hardcoding the CUDA ones.
+_GPU_PROFILER_ACTIVITY = {
+    "cuda": ProfilerActivity.CUDA,
+    "xpu": ProfilerActivity.XPU,
+}.get(GPU_TYPE, ProfilerActivity.CUDA)
+
+# Categories of the host-side launch rows that carry a "correlation" arg linking
+# them to a "kernel" row ("*_runtime" is the user-facing launch API,
+# "*_driver" the lower-level one).
+_GPU_LAUNCH_CATEGORIES = {
+    "cuda": ("cuda_runtime", "cuda_driver"),
+    "xpu": ("xpu_runtime", "xpu_driver"),
+}.get(GPU_TYPE, ("cuda_runtime", "cuda_driver"))
 
 
 class Model(torch.nn.Module):
@@ -744,7 +757,7 @@ class TestProvenanceTracingStackTraces(TestCase):
         self.assertEqual(markers, handles)
         self.assertTrue(any(n.startswith("## Call CompiledFxGraph ") for n in names))
 
-    @requires_cuda_and_triton
+    @requires_gpu_and_triton
     @torch._inductor.config.patch(
         {
             "trace.provenance_tracking_level": 2,
@@ -757,7 +770,7 @@ class TestProvenanceTracingStackTraces(TestCase):
         def f(a, b, c):
             return (a @ b) @ c
 
-        inputs = [torch.randn(64, 64, device="cuda") for _ in range(3)]
+        inputs = [torch.randn(64, 64, device=GPU_TYPE) for _ in range(3)]
         torch._dynamo.reset()
         reset_inductor_kernel_provenance_debug_handle()
         payload_buffer = io.StringIO()
@@ -779,10 +792,10 @@ class TestProvenanceTracingStackTraces(TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             trace_path = os.path.join(tmp, "trace.json")
             with torch.profiler.profile(
-                activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA]
+                activities=[ProfilerActivity.CPU, _GPU_PROFILER_ACTIVITY]
             ) as prof:
                 compiled(*inputs)
-                torch.cuda.synchronize()
+                torch.accelerator.synchronize()
             prof.export_chrome_trace(trace_path)
             with open(trace_path) as trace_file:
                 events = json.load(trace_file)["traceEvents"]
@@ -798,7 +811,7 @@ class TestProvenanceTracingStackTraces(TestCase):
         launches = {
             e["args"]["correlation"]: e
             for e in events
-            if e.get("cat") in ("cuda_runtime", "cuda_driver")
+            if e.get("cat") in _GPU_LAUNCH_CATEGORIES
             and "correlation" in e.get("args", {})
         }
         kernel_launches = sorted(
