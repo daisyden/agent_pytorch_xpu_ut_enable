@@ -137,7 +137,10 @@ class TestStateDictUtils(DTensorContinuousTestBase):
 
     @with_comms
     @skip_if_lt_x_gpu(2)
-    @unittest.skipIf(TEST_XPU, "XPU does not support pin_memory from cudart")
+    @unittest.skipIf(
+        TEST_XPU,  # issues/XXXX_XPU_HOST_PIN_MEMORY
+        "https://github.com/intel/torch-xpu-ops/issues/XXXX_XPU_HOST_PIN_MEMORY",
+    )
     def test_create_cpu_state_dict(self):
         device = torch.device(self.device_type)
         rank = dist.get_rank()
