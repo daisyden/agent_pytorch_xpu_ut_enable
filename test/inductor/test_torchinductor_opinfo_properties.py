@@ -1151,6 +1151,8 @@ class TestOpInfoProperties(TestCase):
     @skipIfTorchDynamo("Test uses dynamo already")
     @ops(llm_ops, allowed_dtypes=DTYPES)
     @parametrize("backend", BACKENDS)
+    # XPU xfails for this test live in XPU_XFAIL_DICTS:
+    # https://github.com/intel/torch-xpu-ops/issues/5168
     def test_eager_equivalence(self, device, dtype, op, backend):
         """Test bounded numerical equivalence with eager execution."""
         torch._dynamo.reset()
@@ -1195,6 +1197,8 @@ class TestOpInfoProperties(TestCase):
     @skipIfTorchDynamo("Test uses dynamo already")
     @ops(llm_unary_ops, allowed_dtypes=DTYPES)
     @parametrize("backend", BACKENDS)
+    # XPU xfails for this test live in XPU_XFAIL_DICTS:
+    # https://github.com/intel/torch-xpu-ops/issues/5168
     def test_unary_ufunc_numerical(self, device, dtype, op, backend):
         """Test unary ufuncs with exhaustive (16-bit) or sampled (fp32) inputs.
 
