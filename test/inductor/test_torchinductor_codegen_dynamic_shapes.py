@@ -251,10 +251,22 @@ test_failures = {
     "test_adaptive_max_pool2d2_dynamic_shapes": TestFailure(("cpu", "cuda", "xpu")),
     # Unsupported XPU configurations still fall back to ATen eager, so no
     # Triton kernel is generated.
-    "test_max_pool2d_with_indices_backward2_dynamic_shapes": TestFailure(("xpu",)),
-    "test_max_pool2d_with_indices_backward4_dynamic_shapes": TestFailure(("xpu",)),
-    "test_max_pool2d_with_indices_backward5_dynamic_shapes": TestFailure(("xpu",)),
-    "test_max_pool2d_with_indices_backward6_dynamic_shapes": TestFailure(("xpu",)),
+    # https://github.com/intel/torch-xpu-ops/issues/XXXX_MAXPOOL_CG
+    "test_max_pool2d_with_indices_backward2_dynamic_shapes": TestFailure(  # issues/XXXX_MAXPOOL_CG
+        ("xpu",)  # issues/XXXX_MAXPOOL_CG
+    ),
+    # https://github.com/intel/torch-xpu-ops/issues/XXXX_MAXPOOL_CG
+    "test_max_pool2d_with_indices_backward4_dynamic_shapes": TestFailure(  # issues/XXXX_MAXPOOL_CG
+        ("xpu",)  # issues/XXXX_MAXPOOL_CG
+    ),
+    # https://github.com/intel/torch-xpu-ops/issues/XXXX_MAXPOOL_CG
+    "test_max_pool2d_with_indices_backward5_dynamic_shapes": TestFailure(  # issues/XXXX_MAXPOOL_CG
+        ("xpu",)  # issues/XXXX_MAXPOOL_CG
+    ),
+    # https://github.com/intel/torch-xpu-ops/issues/XXXX_MAXPOOL_CG
+    "test_max_pool2d_with_indices_backward6_dynamic_shapes": TestFailure(  # issues/XXXX_MAXPOOL_CG
+        ("xpu",)  # issues/XXXX_MAXPOOL_CG
+    ),
     "test_argmax_to_float_dynamic_shapes": TestFailure(("cpu", "cuda", "xpu")),
     "test_avg_pool2d7_dynamic_shapes": TestFailure(("cpu", "cuda", "xpu")),
     "test_avg_pool2d_backward4_dynamic_shapes": TestFailure(("cpu", "cuda", "xpu")),
