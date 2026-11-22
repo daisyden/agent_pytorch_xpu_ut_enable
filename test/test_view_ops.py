@@ -1178,8 +1178,7 @@ class TestOldViewOpsDeviceType(TestCase):
     hw_classification = HardwareClassification.ACCELERATOR
 
     @skipXPUIf(
-        True,
-        "NotImplementedError with test_ravel, https://github.com/intel/torch-xpu-ops/issues/2358",
+        True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_QUANTIZEDXPU_EMPTYAFF"
     )
     @expectedFailureMPS
     def test_ravel(self, device):
@@ -1342,8 +1341,7 @@ class TestOldViewOpsDeviceType(TestCase):
         )
 
     @skipXPUIf(
-        True,
-        "NotImplementedError with test_flatten,https://github.com/intel/torch-xpu-ops/issues/2358",
+        True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_QUANTIZEDXPU_EMPTYAFF"
     )
     @expectedFailureMPS
     def test_flatten(self, device):
