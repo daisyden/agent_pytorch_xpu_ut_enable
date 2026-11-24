@@ -2084,8 +2084,9 @@ class outer_fn(torch.nn.Module):
             out.sum().backward()
 
     @unittest.skipUnless(
-        IS_FLEX_ATTENTION_CUDA_PLATFORM_SUPPORTED,
-        "Requires CUDA with SM >= 8.0, and Triton",
+        IS_FLEX_ATTENTION_CUDA_PLATFORM_SUPPORTED
+        or IS_FLEX_ATTENTION_XPU_PLATFORM_SUPPORTED,
+        "Requires CUDA with SM >= 8.0, or Intel GPU, and Triton",
     )
     def test_nested_compile_transformer_with_flex_attention_compiled_layers(
         self,
