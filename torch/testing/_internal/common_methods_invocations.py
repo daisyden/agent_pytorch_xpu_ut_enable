@@ -12670,10 +12670,8 @@ op_db: list[OpInfo] = [
                     supports_fwgrad_bwgrad=True,
                     rhs_make_tensor_kwargs=dict(exclude_zero=False),
                     skips=(
-                        DecorateInfo(unittest.expectedFailure,
-                                     'TestBinaryUfuncsDevice',
-                                     'test_type_promotion',
-                                     device_type='xpu'),
+                        # https://github.com/intel/torch-xpu-ops/issues/5900
+                        DecorateInfo(unittest.expectedFailure, 'TestBinaryUfuncsDevice', 'test_type_promotion', device_type='xpu'),
                         # dispatch to lazy test failed
                         DecorateInfo(unittest.expectedFailure, 'TestLazyOpInfoDevice', 'test_dispatched_to_lazy'),
                         # test error disabled since rhs non-tensor python scalar is supported
@@ -12688,10 +12686,8 @@ op_db: list[OpInfo] = [
                     supports_fwgrad_bwgrad=True,
                     rhs_make_tensor_kwargs=dict(exclude_zero=False),
                     skips=(
-                        DecorateInfo(unittest.expectedFailure,
-                                     'TestBinaryUfuncsDevice',
-                                     'test_type_promotion',
-                                     device_type='xpu'),
+                        # https://github.com/intel/torch-xpu-ops/issues/5900
+                        DecorateInfo(unittest.expectedFailure, 'TestBinaryUfuncsDevice', 'test_type_promotion', device_type='xpu'),
                         # dispatch to lazy test failed
                         DecorateInfo(unittest.expectedFailure, 'TestLazyOpInfoDevice', 'test_dispatched_to_lazy'),
                         # test error disabled since rhs non-tensor python scalar is supported
@@ -14709,14 +14705,11 @@ op_db: list[OpInfo] = [
     BinaryUfuncInfo('logaddexp',
                     dtypes=floating_and_complex_types_and(torch.bfloat16, torch.float16),
                     dtypesIfCUDA=floating_and_complex_types_and(torch.bfloat16, torch.float16, torch.complex32),
+                    dtypesIfXPU=floating_and_complex_types_and(torch.bfloat16, torch.float16, torch.complex32),
                     dtypesIfHpu=custom_types(torch.float32, torch.bfloat16),
                     supports_forward_ad=True,
                     supports_fwgrad_bwgrad=True,
-                    supports_rhs_python_scalar=False,
-                    skips=(
-                        DecorateInfo(unittest.skip("Skipped!"), 'TestBinaryUfuncsDevice', 'test_type_promotion',
-                                     device_type='xpu'),
-                    )),
+                    supports_rhs_python_scalar=False),
     OpInfo('logaddexp2',
            dtypes=floating_types_and(torch.bfloat16, torch.half),
            dtypesIfHpu=custom_types(torch.float32, torch.bfloat16),
@@ -15123,6 +15116,7 @@ op_db: list[OpInfo] = [
         skips=(
             # Incorrectly attempts to use a scalar for the second argument
             DecorateInfo(unittest.expectedFailure, 'TestJit', 'test_jit_alias_remapping'),
+            # https://github.com/intel/torch-xpu-ops/issues/5900
             DecorateInfo(unittest.expectedFailure, 'TestBinaryUfuncsDevice', 'test_type_promotion', device_type='xpu'),
         )),
     BinaryUfuncInfo(
@@ -15134,8 +15128,10 @@ op_db: list[OpInfo] = [
         ref=np.maximum,
         supports_rhs_python_scalar=False,
         skips=(
+            # https://github.com/intel/torch-xpu-ops/issues/5900
             DecorateInfo(unittest.expectedFailure, 'TestBinaryUfuncsDevice', 'test_type_promotion', device_type='xpu'),
-        )),
+        ),
+    ),
     BinaryUfuncInfo(
         'min',
         aliases=('minimum',),
@@ -15150,10 +15146,8 @@ op_db: list[OpInfo] = [
         skips=(
             # Incorrectly attempts to use a scalar for the second argument
             DecorateInfo(unittest.expectedFailure, 'TestJit', 'test_jit_alias_remapping'),
-            DecorateInfo(unittest.expectedFailure,
-                         'TestBinaryUfuncsDevice',
-                         'test_type_promotion',
-                         device_type='xpu'),
+            # https://github.com/intel/torch-xpu-ops/issues/5900
+            DecorateInfo(unittest.expectedFailure, 'TestBinaryUfuncsDevice', 'test_type_promotion', device_type='xpu'),
         )),
     BinaryUfuncInfo(
         'minimum',
@@ -15164,10 +15158,8 @@ op_db: list[OpInfo] = [
         ref=np.minimum,
         supports_rhs_python_scalar=False,
         skips=(
-            DecorateInfo(unittest.expectedFailure,
-                         'TestBinaryUfuncsDevice',
-                         'test_type_promotion',
-                         device_type='xpu'),
+            # https://github.com/intel/torch-xpu-ops/issues/5900
+            DecorateInfo(unittest.expectedFailure, 'TestBinaryUfuncsDevice', 'test_type_promotion', device_type='xpu'),
         ),
     ),
     BinaryUfuncInfo('logical_and',
