@@ -32,7 +32,7 @@ from torch.testing._internal.common_dtype import (
 from torch.testing._internal.common_device_type import (
     onlyCPU, onlyCUDA, onlyNativeDeviceTypes, onlyOn, disablecuDNN,
     skipCUDAIfNoCusolver, skipCPUIfNoLapack, skipCPUIfNoFFT, skipCUDAIf, precisionOverride,
-    skipCPUIfNoMklSparse, toleranceOverride, tol, skipXPU, e4m3_type, e5m2_type, E4M3_MAX_POS, E5M2_MAX_POS,
+    skipCPUIfNoMklSparse, toleranceOverride, tol, skipXPU, skipXPUIf, e4m3_type, e5m2_type, E4M3_MAX_POS, E5M2_MAX_POS,
 )
 from torch.testing._internal.common_cuda import (
     PLATFORM_SUPPORTS_CUBLASLT_MNK4, PLATFORM_SUPPORTS_FLASH_ATTENTION, PLATFORM_SUPPORTS_FP8,
@@ -17559,13 +17559,15 @@ op_db: list[OpInfo] = [
         dtypesIfCUDA=custom_types(torch.float16)
         if not SM80OrLater
         else custom_types(torch.float16, torch.bfloat16),
+        dtypesIfXPU=custom_types(torch.float16, torch.bfloat16),
         supports_out=False,
         has_nondeterministic_output=True,
         supports_autograd=True,
         supports_fwgrad_bwgrad=False,
         supports_forward_ad=False,
         check_batched_forward_grad=False,
-        decorators=[skipXPU, skipCUDAIf(not PLATFORM_SUPPORTS_FLASH_ATTENTION, "This platform doesn't support Flash Attention")],
+        decorators=[skipCUDAIf(not PLATFORM_SUPPORTS_FLASH_ATTENTION, "This platform doesn't support Flash Attention"),
+                    skipXPUIf(not PLATFORM_SUPPORTS_FLASH_ATTENTION, "This platform doesn't support Flash Attention")],
         skips=(
             # Checking the scalar value of the philox seed and offset
             DecorateInfo(unittest.expectedFailure, 'TestCompositeCompliance', 'test_operator', device_type=('cuda', 'xpu')),
@@ -17607,6 +17609,7 @@ op_db: list[OpInfo] = [
         skip_cow_input_backward=True,
         decorators=[
             skipCUDAIf(not PLATFORM_SUPPORTS_MEM_EFF_ATTENTION, "This platform doesn't support efficient attention"),
+            # wontfix: https://github.com/intel/torch-xpu-ops/issues/5809
             skipXPU],
         skips=(
             # Checking the scaler value of the philox seed and offset
