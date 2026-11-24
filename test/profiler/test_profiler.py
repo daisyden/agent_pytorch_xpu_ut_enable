@@ -3482,6 +3482,46 @@ with open(sys.argv[1], "w") as f:
         self.assertGreater(raw_device_us, 0, "Expected real device activity")
         self.assertEqual(benchmark_device_us, raw_device_us, atol=1e-6, rtol=0)
 
+    @unittest.skipIf(
+        IS_JETSON, "Jetson has a guard against OOM since host and gpu memory are shared"
+    )
+    def test_oom_tracing(self, device):
+        def run_profiler(tensor_creation_fn):
+            with _profile(profile_memory=True, record_shapes=True) as prof:
+                with self.assertRaisesRegex(RuntimeError, ".*[tT]ried to allocate.*"):
+                    x = tensor_creation_fn()
+                return prof
+
+        def create_device_tensor_oom():
+            return torch.empty(
+                1024, 1024, 1024, 1024, dtype=torch.float32, device=device
+            )
+
+        def check_trace(fname):
+            prof.export_chrome_trace(fname)
+            with open(fname) as f:
+                trace = json.load(f)
+                self.assertTrue("traceEvents" in trace)
+                events = trace["traceEvents"]
+                found_out_of_memory_events = False
+                for evt in events:
+                    self.assertTrue("name" in evt)
+                    if evt["name"] == "[OutOfMemory]":
+                        found_out_of_memory_events = True
+                        self.assertTrue("args" in evt)
+                        self.assertTrue("Device Type" in evt["args"])
+                        self.assertTrue("Device Id" in evt["args"])
+                        self.assertTrue("Bytes" in evt["args"])
+
+                        # Memory should be an instantaneous event.
+                        self.assertTrue("dur" not in evt["args"])
+                        self.assertTrue("cat" not in evt["args"])
+                self.assertTrue(found_out_of_memory_events)
+
+        with TemporaryFileName(mode="w+") as fname:
+            prof = run_profiler(create_device_tensor_oom)
+            check_trace(fname)
+
 
 instantiate_device_type_tests(TestProfilerDevice, globals(), allow_xpu=True)
 
