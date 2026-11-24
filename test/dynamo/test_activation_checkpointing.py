@@ -1664,7 +1664,9 @@ class ActivationCheckpointingViaTagsTests(ActivationCheckpointingViaTagsTestBase
             self._validate(fn, backend, x, skip_check=not preserve_rng_state)
             self._compare_orig_and_checkpointed_fns(gn, fn, x)
 
-    @skipIfXpu(msg="XPU has some known limitations on flash attention.")
+    @skipIfXpu(
+        msg="https://github.com/intel/torch-xpu-ops/issues/SDPA_EFFICIENT_ATTN_AUTOCAST_ACCURACY"
+    )
     def test_autocast_flash_attention(self, device):
         def fn(primals_1, primals_2, primals_3):
             return torch.ops.aten._scaled_dot_product_efficient_attention.default(
