@@ -26,6 +26,7 @@ from torch.testing._internal.common_utils import (
     munge_exc,
     skipIfTorchDynamo,
     skipIfWindows,
+    skipIfXpu,
 )
 from torch.testing._internal.inductor_utils import (
     HAS_CUDA_AND_TRITON,
@@ -36,7 +37,10 @@ from torch.testing._internal.logging_utils import (
     make_logging_test,
     make_settings_test,
 )
-from torch.testing._internal.triton_utils import requires_cuda_and_triton
+from torch.testing._internal.triton_utils import (
+    requires_cuda_and_triton,
+    requires_gpu_and_triton,
+)
 
 
 requires_gpu = unittest.skipUnless(
@@ -434,7 +438,10 @@ Found from :
         exitstack.close()
 
     @requires_distributed()
-    @requires_cuda_and_triton
+    @requires_gpu_and_triton
+    @skipIfXpu(
+        msg="https://github.com/intel/torch-xpu-ops/issues/DDP_GLOO_VERIFY_PARAMS_NO_XPU_BACKEND"
+    )
     @make_logging_test(ddp_graphs=True)
     def test_ddp_graphs(self, records):
         class ToyModel(torch.nn.Module):
@@ -452,10 +459,10 @@ Found from :
         os.environ["MASTER_PORT"] = str(find_free_port())
         dist.init_process_group("gloo", rank=0, world_size=1)
 
-        model = DDP(ToyModel().to("cuda:0"), device_ids=[0], bucket_cap_mb=4)
+        model = DDP(ToyModel().to(device_type), device_ids=[0], bucket_cap_mb=4)
         ddp_model = torch.compile(model, backend="inductor")
 
-        ddp_model(torch.randn(1024, 1024, device="cuda:0"))
+        ddp_model(torch.randn(1024, 1024, device=device_type))
 
         dist.destroy_process_group()
         self.assertEqual(len([r for r in records if "__ddp_graphs" in r.name]), 4)
