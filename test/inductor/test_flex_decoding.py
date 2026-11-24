@@ -46,7 +46,7 @@ from torch.testing._internal.common_device_type import (
     skipXPUIf,
 )
 from torch.testing._internal.common_quantized import _snr
-from torch.testing._internal.common_utils import IS_CI, IS_WINDOWS
+from torch.testing._internal.common_utils import IS_CI, IS_WINDOWS, skipIfXpu
 from torch.utils._triton import has_triton_tma_device
 
 
@@ -1009,6 +1009,7 @@ class TestFlexDecoding(InductorTestCase):
     @supported_platform
     @common_utils.parametrize("head_dims", test_Hq_Hkv)
     @with_tf32_off
+    @skipIfXpu(msg="https://github.com/intel/torch-xpu-ops/issues/5789")
     def test_pointwise_query_producer(self, device, head_dims):
         # https://github.com/pytorch/pytorch/issues/198513
         # The pointwise producer's layout follows its [B, S, H, D] input, not the
