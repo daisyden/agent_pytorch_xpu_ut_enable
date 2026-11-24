@@ -9,7 +9,11 @@ from torch.testing._internal.common_distributed import (
     requires_accelerator_dist_backend,
     skip_if_lt_x_gpu,
 )
-from torch.testing._internal.common_utils import run_tests, TEST_WITH_DEV_DBG_ASAN
+from torch.testing._internal.common_utils import (
+    run_tests,
+    skipIfXpu,
+    TEST_WITH_DEV_DBG_ASAN,
+)
 from torch.testing._internal.distributed._shard.sharded_tensor import (
     ShardedTensorTestBase,
     TEST_GPU_NUM,
@@ -174,6 +178,7 @@ class TestShardedEmbeddingBag(ShardedTensorTestBase):
     @with_comms(init_rpc=False, backend=backend)
     @skip_if_lt_x_gpu(TEST_GPU_NUM)
     @requires_accelerator_dist_backend(["nccl", "xccl"])
+    @skipIfXpu(msg="https://github.com/intel/torch-xpu-ops/issues/5455")
     def test_sharded_embedding_bag_rowwise(self):
         for spec in generate_chunk_sharding_specs_for_test(0):
             self._test_sharded_embedding_bag_with_test_cases(spec, 0)
