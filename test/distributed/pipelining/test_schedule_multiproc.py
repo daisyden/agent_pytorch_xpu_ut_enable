@@ -67,6 +67,7 @@ from torch.testing._internal.common_utils import (
     parametrize,
     run_tests,
     skip_but_pass_in_sandcastle_if,
+    skipIfXpu,
     TEST_MULTIACCELERATOR,
 )
 
@@ -2092,6 +2093,7 @@ class PerEdgeScheduleTest(MultiProcContinuousTest):
     @parametrize("ScheduleClass", [ScheduleGPipe, Schedule1F1B])
     @parametrize("use_tracer", [False, True])
     @skip_if_lt_x_gpu(4)
+    @skipIfXpu(msg="https://github.com/intel/torch-xpu-ops/issues/5742")
     def test_grad_with_per_edge(self, ScheduleClass, use_tracer):
         """Per-edge P2P only changes which communicator carries the bytes,
         not the math: gradients/outputs must still match the reference model."""
