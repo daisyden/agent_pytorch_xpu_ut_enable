@@ -16,7 +16,7 @@ from torch.testing._internal.common_utils import \
 from torch.testing._internal.common_device_type import \
     (instantiate_device_type_tests, ops, dtypes, dtypesIfCPU, onlyNativeDeviceTypes,
      skipCPUIfNoFFT, deviceCountAtLeast, onlyCUDA, onlyOn, OpDTypes, toleranceOverride, tol,
-     largeTensorTest)
+     largeTensorTest, skipXPUIf)
 from torch.testing._internal.common_methods_invocations import (
     spectral_funcs, SpectralFuncType)
 from torch._prims_common import corresponding_complex_dtype
@@ -129,6 +129,13 @@ class TestFFT(TestCase):
     exact_dtype = True
 
     @onlyNativeDeviceTypes
+    # oneMKL's 1-D FFT is a few ulp less accurate than numpy's for float32/complex64;
+    # the worst observed absolute difference is ~2x the default 1e-05.
+    # https://github.com/intel/torch-xpu-ops/issues/5440
+    @toleranceOverride({
+        torch.float: tol(atol=5e-5, rtol=2e-5),
+        torch.cfloat: tol(atol=5e-5, rtol=2e-5),
+    })
     @ops([op for op in spectral_funcs if op.ndimensional == SpectralFuncType.OneD],
          allowed_dtypes=(torch.float, torch.cfloat))
     def test_reference_1d(self, device, dtype, op):
@@ -365,6 +372,10 @@ class TestFFT(TestCase):
         )
 
     @onlyNativeDeviceTypes
+    # oneMKL has no power-of-two restriction for half precision, so XPU accepts the
+    # 13x13 input this test expects to be rejected.
+    # https://github.com/intel/torch-xpu-ops/issues/5441
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/5441")
     @ops(spectral_funcs, allowed_dtypes=(torch.half, torch.chalf))
     def test_fft_half_and_chalf_not_power_of_two_error(self, device, dtype, op):
         t = make_tensor(13, 13, device=device, dtype=dtype)
@@ -1724,7 +1735,7 @@ for doc_test in FFTDocTestFinder().find(torch.fft, globs=dict(torch=torch)):
     generate_doc_test(doc_test)
 
 
-instantiate_device_type_tests(TestFFT, globals())
+instantiate_device_type_tests(TestFFT, globals(), allow_xpu=True)
 instantiate_device_type_tests(TestFFTDocExamples, globals(), only_for='cpu')
 
 if __name__ == '__main__':
