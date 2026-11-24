@@ -17607,6 +17607,7 @@ op_db: list[OpInfo] = [
         skip_cow_input_backward=True,
         decorators=[
             skipCUDAIf(not PLATFORM_SUPPORTS_MEM_EFF_ATTENTION, "This platform doesn't support efficient attention"),
+            # wontfix: https://github.com/intel/torch-xpu-ops/issues/5809
             skipXPU],
         skips=(
             # Checking the scaler value of the philox seed and offset

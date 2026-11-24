@@ -4823,7 +4823,7 @@ class TestHardwareClassifications(TestCase):
                 self.assertEqual(ran, {"test_cuda", "test_unclassified"}, output)
 
 
-instantiate_device_type_tests(TestOpInfoSampleFunctions, globals())
+instantiate_device_type_tests(TestOpInfoSampleFunctions, globals(), allow_xpu=True)
 instantiate_parametrized_tests(TestImports)
 
 
