@@ -23,6 +23,7 @@ from torch.testing._internal.common_fsdp import FSDPTest, get_devtype
 from torch.testing._internal.common_utils import (
     get_cycles_per_ms,
     run_tests,
+    skipIfXpu,
     TEST_CUDA,
     TEST_HPU,
 )
@@ -551,7 +552,11 @@ class TestFullyShardHSDPSyncCorrectness(FSDPTest):
                 )
 
     @skip_if_lt_x_gpu(2)
-    @unittest.skipIf(not TEST_CUDA, "HSDP sync correctness test is CUDA-only")
+    @unittest.skipIf(
+        not torch.accelerator.is_available(),
+        "HSDP sync correctness test requires an accelerator",
+    )
+    @skipIfXpu(msg="https://github.com/intel/torch-xpu-ops/issues/5734")
     def test_partial_repack_after_slow_all_reduce(self):
         # No input requires grad, so both post-backwards run in the final
         # callback. layer's finalize_backward releases its fp32 all-reduce
@@ -592,7 +597,9 @@ class TestFullyShardHSDPSyncCorrectness(FSDPTest):
         orig_all_reduce = dist.all_reduce
 
         def slow_all_reduce(*args, **kwargs):
-            torch.cuda._sleep(int(200 * get_cycles_per_ms()))
+            torch.get_device_module(device_type)._sleep(
+                int(200 * get_cycles_per_ms(device_type.type))
+            )
             return orig_all_reduce(*args, **kwargs)
 
         with mock.patch.object(dist, "all_reduce", slow_all_reduce):
