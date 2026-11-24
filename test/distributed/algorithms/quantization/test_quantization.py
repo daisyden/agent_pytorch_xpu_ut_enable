@@ -21,8 +21,8 @@ from torch.testing._internal.common_utils import (
     _snapshot_fp32_precision,
     run_tests,
     skip_but_pass_in_sandcastle_if,
+    skipIfXpu,
     TEST_WITH_DEV_DBG_ASAN,
-    TEST_XPU,
 )
 
 
@@ -30,10 +30,6 @@ from torch.testing._internal.common_utils import (
 # its inverse) are only registered for CPU and CUDA in
 # torch/csrc/distributed/c10d/quantization/, so BFP16 collectives cannot run on
 # XPU yet.
-_BFP16_XPU_SKIP_MSG = (
-    "XPU lacks quantization::_FloatToBfloat16Quantized; "
-    "see https://github.com/intel/torch-xpu-ops/issues/4941"
-)
 
 
 _PRIOR_FP32_PRECISION: tuple[str, ...] | None = None
@@ -159,7 +155,9 @@ if BACKEND in ("gloo", "nccl", "xccl"):
         )
         @skip_if_lt_x_gpu(int(os.environ["WORLD_SIZE"]))
         @skip_if_rocm_multiprocess
-        @skip_but_pass_in_sandcastle_if(TEST_XPU, _BFP16_XPU_SKIP_MSG)
+        @skipIfXpu(
+            msg="https://github.com/intel/torch-xpu-ops/issues/QUANT_BFP16_XPU_UNIMPL"
+        )
         def test_all_to_all_bfp16(self):
             group = list(range(self.world_size))
             group_id = dist.new_group(range(self.world_size))
@@ -202,7 +200,9 @@ if BACKEND in ("gloo", "nccl", "xccl"):
             f"Only {ACCELERATOR_BACKEND} backend supports all_to_all_single_bfp16",
         )
         @skip_if_lt_x_gpu(int(os.environ["WORLD_SIZE"]))
-        @skip_but_pass_in_sandcastle_if(TEST_XPU, _BFP16_XPU_SKIP_MSG)
+        @skipIfXpu(
+            msg="https://github.com/intel/torch-xpu-ops/issues/QUANT_BFP16_XPU_UNIMPL"
+        )
         def test_all_to_all_single_bfp16(self):
             group = list(range(self.world_size))
             group_id = dist.new_group(range(self.world_size))
