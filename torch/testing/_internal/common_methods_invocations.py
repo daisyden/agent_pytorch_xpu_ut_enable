@@ -14881,7 +14881,7 @@ op_db: list[OpInfo] = [
            decorators=[
                # NVIDIA only assures that bfloat16 is supported by bmm if SM >= 5.3
                DecorateInfo(unittest.skip("Skipped!"), 'TestCommon', 'test_dtypes',
-                            device_type=('cuda', 'xpu'), active_if=not SM53OrLater),
+                            device_type='cuda', active_if=not SM53OrLater),
                # ROCm intermittently fails the test with standard atol/rtol
                DecorateInfo(toleranceOverride({torch.float32: tol(atol=1e-4, rtol=0)}),
                             'TestCommon', 'test_noncontiguous_samples', device_type=('cuda', 'xpu'),
@@ -17603,11 +17603,11 @@ op_db: list[OpInfo] = [
         supports_fwgrad_bwgrad=False,
         supports_forward_ad=False,
         check_batched_forward_grad=False,
+        dtypesIfXPU=custom_types(torch.float16, torch.float32),
         # TODO: Skip because it produces a CUDA illegal memory access for some reason
         skip_cow_input_backward=True,
         decorators=[
-            skipCUDAIf(not PLATFORM_SUPPORTS_MEM_EFF_ATTENTION, "This platform doesn't support efficient attention"),
-            skipXPU],
+            skipCUDAIf(not PLATFORM_SUPPORTS_MEM_EFF_ATTENTION, "This platform doesn't support efficient attention")],
         skips=(
             # Checking the scaler value of the philox seed and offset
             DecorateInfo(unittest.expectedFailure, 'TestCompositeCompliance', 'test_operator', device_type=('cuda', 'xpu')),
@@ -17615,6 +17615,28 @@ op_db: list[OpInfo] = [
             DecorateInfo(unittest.expectedFailure, 'TestJit', 'test_variant_consistency_jit', device_type='cuda'),
             # None Mismatch Tensor
             DecorateInfo(unittest.expectedFailure, 'TestCompositeCompliance', 'test_backward', device_type=('cuda', 'xpu')),
+            # aten::_efficient_attention_forward has no XPU kernel, so every test that
+            # actually runs the op falls back to CPU and raises NotImplementedError. The
+            # meta/fake-tensor paths do work, so gate only the tests that execute it.
+            # https://github.com/intel/torch-xpu-ops/issues/5809
+            DecorateInfo(unittest.skip("https://github.com/intel/torch-xpu-ops/issues/5809"),
+                         'TestCommon', 'test_dtypes', device_type='xpu'),
+            DecorateInfo(unittest.skip("https://github.com/intel/torch-xpu-ops/issues/5809"),
+                         'TestCommon', 'test_variant_consistency_eager', device_type='xpu'),
+            DecorateInfo(unittest.skip("https://github.com/intel/torch-xpu-ops/issues/5809"),
+                         'TestCompositeCompliance', 'test_cow_input', device_type='xpu'),
+            DecorateInfo(unittest.skip("https://github.com/intel/torch-xpu-ops/issues/5809"),
+                         'TestCompositeCompliance', 'test_view_replay', device_type='xpu'),
+            DecorateInfo(unittest.skip("https://github.com/intel/torch-xpu-ops/issues/5809"),
+                         'TestFakeTensor', 'test_fake_crossref_backward_amp', device_type='xpu'),
+            DecorateInfo(unittest.skip("https://github.com/intel/torch-xpu-ops/issues/5809"),
+                         'TestFakeTensor', 'test_fake_crossref_backward_no_amp', device_type='xpu'),
+            DecorateInfo(unittest.skip("https://github.com/intel/torch-xpu-ops/issues/5809"),
+                         'TestCommon', 'test_multiple_devices', device_type='xpu'),
+            DecorateInfo(unittest.skip("https://github.com/intel/torch-xpu-ops/issues/5809"),
+                         'TestCommon', 'test_out', device_type='xpu'),
+            DecorateInfo(unittest.skip("https://github.com/intel/torch-xpu-ops/issues/5809"),
+                         'TestCommon', 'test_out_warning', device_type='xpu'),
         )
     ),
     UnaryUfuncInfo(
@@ -20691,6 +20713,9 @@ DecorateInfo(unittest.skip("Skipped!"), 'TestDecomp', 'test_quick'),
     OpInfo('histogram',
            dtypes=floating_types(),
            dtypesIfCUDA=_dispatch_dtypes(),  # histogram is only implemented on CPU
+           # XPU has no histogram kernel either, but the op falls back to CPU, so the
+           # float dtypes do work there.
+           dtypesIfXPU=floating_types_and(torch.half, torch.bfloat16),
            sample_inputs_func=sample_inputs_histogram,
            supports_autograd=False,
            skips=(
@@ -20706,7 +20731,6 @@ DecorateInfo(unittest.skip("Skipped!"), 'TestDecomp', 'test_quick'),
                # Not Implemented on XLA.
                DecorateInfo(unittest.skip("Skipped!"), 'TestOpInfo', device_type='xla'),
                # Align dtypes with CUDA for fallback ops
-               DecorateInfo(unittest.skip("Skipped!"), 'TestCommon', 'test_dtypes', device_type='xpu'),
            ),
            decorators=(
                DecorateInfo(
@@ -24871,12 +24895,12 @@ python_ref_db = [
             DecorateInfo(unittest.skip("Expected: dropout is not comparable"),
                          'TestMathBits',
                          'test_neg_view'),
-            # dropout is not comparable. On CUDA/ROCm the aten-executor result
+            # dropout is not comparable. On CUDA/ROCm/XPU the aten-executor result
             # for complex happens to match eager (unexpected success vs the xfail
             # below), unlike MPS where it stays non-comparable, so skip complex
             # there rather than xfail.
             DecorateInfo(unittest.skip("dropout is not comparable"), 'TestCommon',
-                         'test_python_ref_executor', device_type='cuda',
+                         'test_python_ref_executor', device_type=('cuda', 'xpu'),
                          dtypes=(torch.complex64, torch.complex128)),
             DecorateInfo(unittest.expectedFailure, 'TestCommon', 'test_python_ref_executor'),
             DecorateInfo(unittest.skip('output is non-deterministic'), 'TestCommon', 'test_compare_cpu'),
@@ -25099,8 +25123,11 @@ python_ref_db = [
         validate_view_consistency=False,
         skips=(
             # RuntimeError: It appears that you're trying to get value out of a tracing tensor - erroring out!
+            # On XPU the same _local_scalar_dense tracing error occurs:
+            # https://github.com/intel/torch-xpu-ops/issues/5848
             DecorateInfo(
-                unittest.expectedFailure, 'TestCommon', 'test_python_ref_executor', device_type="cuda"
+                unittest.expectedFailure, 'TestCommon', 'test_python_ref_executor',
+                device_type=("cuda", "xpu")  # https://github.com/intel/torch-xpu-ops/issues/5848
             ),
         ),
     ),
@@ -25494,7 +25521,7 @@ python_ref_db = [
             # than the torch result was (nan)!
             DecorateInfo(
                 unittest.expectedFailure, 'TestCommon', 'test_python_ref_executor',
-                dtypes=(torch.complex32,),
+                dtypes=(torch.complex32,), device_type="cuda",
             ),
             # Reference result was farther (0.0) from the precise computation
             # than the torch result was (nan)!
@@ -25535,7 +25562,7 @@ python_ref_db = [
             # computation than the torch result was (nan)!
             DecorateInfo(
                 unittest.expectedFailure, 'TestCommon', 'test_python_ref_executor',
-                dtypes=(torch.complex32,),
+                dtypes=(torch.complex32,), device_type="cuda",
             ),
             # Reference result was farther (inf) from the precise
             # computation than the torch result was (nan)!
@@ -25654,7 +25681,7 @@ python_ref_db = [
             # computation than the torch result was (nan)!
             DecorateInfo(
                 unittest.expectedFailure, 'TestCommon', 'test_python_ref_executor',
-                dtypes=(torch.complex32,),
+                dtypes=(torch.complex32,), device_type="cuda",
             ),
             # Reference result was farther (0.7433461727239705) from the precise
             # computation than the torch result was (nan)!
