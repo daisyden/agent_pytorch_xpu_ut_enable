@@ -38,6 +38,7 @@ from torch.testing._internal.common_device_type import (
     dtypes,
     dtypesIfCUDA,
     instantiate_device_type_tests,
+    onlyAccelerator,
     onlyCPU,
     onlyCUDA,
     ops,
@@ -45,6 +46,7 @@ from torch.testing._internal.common_device_type import (
     skipCPUIf,
     skipCUDAIf,
     skipMeta,
+    skipXPUIf,
 )
 from torch.testing._internal.common_dtype import floating_types_and_half
 from torch.testing._internal.common_utils import (
@@ -7166,7 +7168,7 @@ torch.cuda.synchronize()
     @skipIfTorchDynamo("SDPA test compiles internally")
     @skipCUDAIf(not SM70OrLater, "GPU capability is < SM70")
     @xfailIfWindows
-    @onlyCUDA
+    @onlyAccelerator
     @dtypes(
         *(
             [torch.float16, torch.bfloat16, torch.float32]
@@ -7352,7 +7354,7 @@ torch.cuda.synchronize()
     @decorateIf(xfailIfWindows, lambda params: params["dtype"] == torch.float32)
     @skipIfTorchDynamo("SDPA test compiles internally")
     @skipCUDAIf(not SM70OrLater, "GPU capability is < SM70")
-    @onlyCUDA
+    @onlyAccelerator
     @dtypes(
         *(
             [torch.float16, torch.bfloat16, torch.float32]
@@ -7513,6 +7515,7 @@ torch.cuda.synchronize()
     # TODO: Remove these when ViewNestedFromBuffer, etc. are deprecated.
     @skipIfTorchDynamo("compiles internally")
     @skipCUDAIf(not SM70OrLater, "GPU capability is < SM70")
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/3546")
     @parametrize("use_legacy_api", [True, False])
     @skipCPUIf(True, "SDPA Math NT fallback causes failure: see issue #133644")
     @unittest.skipIf(
@@ -9404,7 +9407,7 @@ class TestNestedInt(torch.testing._internal.common_utils.TestCase):
 instantiate_parametrized_tests(TestNestedTensor)
 instantiate_device_type_tests(TestNestedTensorDeviceType, globals())
 instantiate_device_type_tests(TestNestedTensorAutograd, globals())
-instantiate_device_type_tests(TestNestedTensorSubclass, globals())
+instantiate_device_type_tests(TestNestedTensorSubclass, globals(), allow_xpu=True)
 instantiate_device_type_tests(TestNestedTensorOpInfo, globals())
 
 if __name__ == "__main__":
