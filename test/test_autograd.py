@@ -14800,7 +14800,7 @@ class TestAutogradDeviceType(TestCase):
         result = checkpoint(lambda x, mask: x * 2, x, block_mask, use_reentrant=False)
         self.assertEqual(result, x * 2)
 
-    @skipXPUIf(True, "torch._C._scatter Not implemented on XPU, issue #143239")
+    @skipXPUIf(True, "https://github.com/pytorch/pytorch/issues/143239")
     @onlyAccelerator
     def test_checkpointing_without_reentrant_dataparallel(self, device):
         """
