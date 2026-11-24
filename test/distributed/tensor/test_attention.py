@@ -59,6 +59,7 @@ from torch.testing._internal.common_distributed import skip_if_lt_x_gpu
 from torch.testing._internal.common_utils import (
     run_tests,
     skipIfRocm,
+    skipIfXpu,
     TEST_WITH_ROCM,
     TestCase,
 )
@@ -118,6 +119,7 @@ class RingAttentionTest(DTensorTestBase):
         not PLATFORM_SUPPORTS_FUSED_ATTENTION,
         "Does not support flash nor efficient attention",
     )
+    @skipIfXpu(msg="https://github.com/intel/torch-xpu-ops/issues/5744")
     @with_comms
     def test_ring_attention_sdpa(self) -> None:
         self.run_subtests(
@@ -889,6 +891,7 @@ class TestSharding(DTensorTestBase):
         not PLATFORM_SUPPORTS_FUSED_ATTENTION,
         "Does not support flash nor efficient attention",
     )
+    @skipIfXpu(msg="https://github.com/intel/torch-xpu-ops/issues/5743")
     def test_attention_shard_without_cp(self) -> None:
         """Test that sharding on sequence dimension without CP enabled is not supported."""
         from torch.distributed.tensor import distribute_tensor, Replicate, Shard
