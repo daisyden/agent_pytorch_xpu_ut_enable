@@ -443,10 +443,7 @@ class TestTorchDlPackDevice(TestCase):
     @skipMeta
     @onlyAccelerator
     @skipMPS
-    @skipXPUIf(
-        True,
-        "https://github.com/intel/torch-xpu-ops/issues/XXXX_DLPACK_STREAM_VALIDATION",
-    )
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_DLPACK_STRM")
     def test_dlpack_cuda_per_thread_stream(self, device):
         # Test whether we raise an error if we are trying to use per-thread default
         # stream, which is currently not supported by PyTorch.
@@ -486,10 +483,7 @@ class TestTorchDlPackDevice(TestCase):
     @skipMeta
     @onlyAccelerator
     @skipMPS
-    @skipXPUIf(
-        True,
-        "https://github.com/intel/torch-xpu-ops/issues/XXXX_DLPACK_STREAM_VALIDATION",
-    )
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/XXXX_DLPACK_STRM")
     def test_dlpack_invalid_cuda_streams(self, device):
         x = make_tensor((5,), dtype=torch.float32, device=device)
 
