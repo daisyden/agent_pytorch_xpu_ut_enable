@@ -18,6 +18,7 @@ from torch.testing._internal.common_device_type import (
     skipCUDAIfNotRocm,
     skipMeta,
     skipMPS,
+    skipXPUIf,
 )
 from torch.testing._internal.common_dtype import (
     all_mps_types_and,
@@ -440,13 +441,22 @@ class TestTorchDlPackDevice(TestCase):
             x.__dlpack__(stream=object())
 
     @skipMeta
-    @onlyCUDA
+    @onlyAccelerator
+    @skipMPS
+    @skipXPUIf(
+        True,
+        "https://github.com/intel/torch-xpu-ops/issues/XXXX_DLPACK_STREAM_VALIDATION",
+    )
     def test_dlpack_cuda_per_thread_stream(self, device):
         # Test whether we raise an error if we are trying to use per-thread default
         # stream, which is currently not supported by PyTorch.
+        # A backend that cannot honour the requested stream has to reject it (as CPU
+        # does) instead of silently ignoring it.
         x = make_tensor((5,), dtype=torch.float32, device=device)
 
-        if TEST_WITH_ROCM:
+        if torch.device(device).type != "cuda":
+            context = self.assertRaises((AssertionError, BufferError))
+        elif TEST_WITH_ROCM:
             context = self.assertRaisesRegex(
                 AssertionError, r"unsupported stream on ROCm: 2"
             )
@@ -474,11 +484,21 @@ class TestTorchDlPackDevice(TestCase):
         test(x, stream=2)
 
     @skipMeta
-    @onlyCUDA
+    @onlyAccelerator
+    @skipMPS
+    @skipXPUIf(
+        True,
+        "https://github.com/intel/torch-xpu-ops/issues/XXXX_DLPACK_STREAM_VALIDATION",
+    )
     def test_dlpack_invalid_cuda_streams(self, device):
         x = make_tensor((5,), dtype=torch.float32, device=device)
 
-        if TEST_WITH_ROCM:
+        if torch.device(device).type != "cuda":
+            # Non-CUDA accelerators have no legacy-default-stream integer
+            # convention, so stream=0 is not a stream they can honour.
+            with self.assertRaises((AssertionError, BufferError)):
+                x.__dlpack__(stream=0)
+        elif TEST_WITH_ROCM:
             # On ROCm, stream=0 is valid (default stream).
             self.assertIsNotNone(x.__dlpack__(stream=0))
         else:
